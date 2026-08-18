@@ -1,0 +1,32 @@
+[project]
+name = "openmesh"
+version = "0.1.0"
+description = "Local multi-agent Mesh: your API keys, split permissions, group chat."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "openmesh contributors" }]
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.32.0",
+  "httpx>=0.27.0",
+  "pydantic>=2.9.0",
+  "pyyaml>=6.0.2",
+  "python-dotenv>=1.0.1",
+]
+
+[project.scripts]
+openmesh = "openmesh.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[tool.setuptools.package-data]
+openmesh = ["static/*"]

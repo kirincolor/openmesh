@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenMesh</title>
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+  <aside class="rail">
+    <div class="brand">
+      <div class="mark"></div>
+      <div>
+        <div class="name" id="mesh-name">openmesh</div>
+        <div class="sub">local room · split vault</div>
+      </div>
+    </div>
+    <div class="section-label">Teammates</div>
+    <div id="agents"></div>
+    <div class="section-label">Provider</div>
+    <div class="keybox">
+      <div class="keyline"><span>status</span><b id="key-status">no key</b></div>
+      <div class="keyline"><span>model</span><b id="key-model">—</b></div>
+      <label>API key</label>
+      <input id="api-key" type="password" autocomplete="off" placeholder="sk-…" />
+      <label>Base URL</label>
+      <input id="base-url" type="text" placeholder="https://api.openai.com/v1" />
+      <label>Model</label>
+      <input id="model" type="text" placeholder="gpt-4o-mini" />
+      <button type="button" id="save-key">Save locally</button>
+      <p class="hint">写入本机 .env，不上传。兼容 OpenAI / DeepSeek / Groq / Ollama。</p>
+    </div>
+  </aside>
+  <main>
+    <header>
+      <div>
+        <h1>Room</h1>
+        <p>不 @ 任何人时，Chief 先接，再按需交接。点左边的人可以把 @ 写进输入框。</p>
+      </div>
+      <div id="banner" class="banner hidden"></div>
+    </header>
+    <section id="log" class="log">
+      <div id="empty" class="empty">房间是空的。先存一把 API key，再派第一件事。</div>
+    </section>
+    <form id="composer">
+      <textarea id="input" rows="2" placeholder="给一屋子同事派活，或 @coder / @researcher"></textarea>
+      <button type="submit">Send</button>
+    </form>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

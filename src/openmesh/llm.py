@@ -1,0 +1,59 @@
+from __future__ import annotations
+
+from typing import Any
+
+import httpx
+
+from .config import ProviderConfig
+
+
+class LLMError(RuntimeError):
+    pass
+
+
+class LLM:
+    def __init__(self, provider: ProviderConfig) -> None:
+        self.provider = provider
+        self._client = httpx.Client(timeout=120.0)
+
+    def complete(
+        self,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        model: str | None = None,
+    ) -> dict[str, Any]:
+        if not self.provider.api_key:
+            raise LLMError("Missing API key. Copy .env.example to .env and set OPENMESH_API_KEY.")
+        body: dict[str, Any] = {
+            "model": model or self.provider.model,
+            "messages": messages,
+        }
+        if tools:
+            body["tools"] = tools
+            body["tool_choice"] = "auto"
+        url = self.provider.base_url.rstrip("/") + "/chat/completions"
+        try:
+            response = self._client.post(
+                url,
+                headers={
+                    "Authorization": f"Bearer {self.provider.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=body,
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            detail = self._redact(exc.response.text[:800])
+            raise LLMError(f"LLM HTTP {exc.response.status_code}: {detail}") from exc
+        except httpx.HTTPError as exc:
+            raise LLMError(f"LLM request failed: {self._redact(str(exc))}") from exc
+        data = response.json()
+        choices = data.get("choices") or []
+        if not choices:
+            raise LLMError(f"Empty LLM response: {data!r}")
+        return choices[0]["message"]
+
+    def _redact(self, text: str) -> str:
+        from .secrets import redact
+
+        return redact(text, self.provider.api_key)
