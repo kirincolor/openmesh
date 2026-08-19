@@ -9,10 +9,10 @@ from .scaffold import init_project
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="openmesh", description="Local multi-agent Mesh")
+    parser = argparse.ArgumentParser(prog="openmesh", description="Local multi-agent workspace")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    serve = sub.add_parser("serve", help="Start the local room")
+    serve = sub.add_parser("serve", help="Start the local app")
     serve.add_argument("--host", default=os.environ.get("OPENMESH_HOST", "127.0.0.1"))
     serve.add_argument("--port", type=int, default=int(os.environ.get("OPENMESH_PORT", "8787")))
     serve.add_argument("--root", type=Path, default=None)
@@ -36,8 +36,8 @@ def _serve(host: str, port: int, root: Path | None) -> None:
 
     config = load_config(root or find_root())
     app = create_app(config)
-    print(f"OpenMesh room: http://{host}:{port}")
-    print(f"Team file:     {config.root / 'mesh.yaml'}")
+    print(f"OpenMesh:  http://{host}:{port}")
+    print(f"Team file: {config.root / 'mesh.yaml'}")
     if not config.provider.api_key:
-        print("No API key yet. Open the room and paste one, or copy .env.example to .env")
+        print("No API key yet. Open Settings in the app, or copy .env.example to .env")
     uvicorn.run(app, host=host, port=port, log_level="info")

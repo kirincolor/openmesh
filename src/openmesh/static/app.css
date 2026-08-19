@@ -34,10 +34,16 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
 body {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 320px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
   background: var(--bg);
   color: var(--ink);
   font: 15px/1.45 "Segoe UI", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
@@ -52,9 +58,12 @@ button { cursor: pointer; }
 
 .sidebar {
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  background: var(--side);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
   min-width: 0;
+  overflow: hidden;
+  background: var(--side);
 }
 .side-top {
   display: flex;
@@ -95,7 +104,38 @@ button { cursor: pointer; }
 .icon-btn.ghost { background: transparent; color: var(--muted); }
 .icon-btn:hover { opacity: 0.85; }
 
-.agent-list { overflow: auto; padding: 4px 8px 12px; }
+.add-wrap { position: relative; flex: 0 0 auto; }
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 8;
+  min-width: 168px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  display: grid;
+}
+.menu.up { top: auto; bottom: calc(100% + 6px); left: 0; right: auto; }
+.menu button {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.menu button:hover { background: var(--side); }
+
+.agent-list {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 8px 12px;
+}
+.agent-row .faces { width: 40px; height: 40px; }
 .agent-row {
   display: grid;
   grid-template-columns: 44px 1fr auto;
@@ -154,7 +194,11 @@ button { cursor: pointer; }
 .avatar.ink { background: #111; color: #fff; }
 .avatar.sm { width: 28px; height: 28px; font-size: 11px; }
 
-.side-bottom { padding: 10px 12px 14px; }
+.side-bottom {
+  padding: 10px 12px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--side);
+}
 .userchip {
   width: 100%;
   display: flex;
@@ -174,8 +218,11 @@ button { cursor: pointer; }
 
 main {
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 .chat-header {
   display: flex;
@@ -184,8 +231,57 @@ main {
   padding: 16px 22px;
   border-bottom: 1px solid var(--line);
 }
+.chat-title { flex: 1; min-width: 0; }
 .chat-header h1 { margin: 0; font-size: 17px; font-weight: 650; }
 .chat-header p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.header-btn {
+  width: auto;
+  margin: 0;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 650;
+  font-size: 13px;
+}
+.model-pick {
+  max-width: 160px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+.schedule-list { display: grid; gap: 8px; margin-top: 14px; }
+.schedule-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 13px;
+}
+.schedule-row button {
+  width: auto;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  font-weight: 650;
+}
+.faces { display: flex; align-items: center; }
+.faces .avatar { margin-left: -10px; box-shadow: 0 0 0 2px var(--bg); }
+.faces .avatar:first-child { margin-left: 0; }
+.kind {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 550;
+  vertical-align: middle;
+}
 
 .banner {
   margin: 10px 22px 0;
@@ -197,8 +293,11 @@ main {
 }
 
 .log {
+  min-height: 0;
   padding: 22px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -229,6 +328,14 @@ main {
   font-size: 12px;
 }
 .msg.error .body { background: var(--banner); color: var(--banner-ink); }
+.file-card {
+  display: block;
+  min-width: 220px;
+  text-decoration: none;
+  color: inherit;
+}
+.file-card b { display: block; }
+.file-card small { color: var(--muted); font-size: 12px; }
 
 #composer { padding: 10px 18px 18px; }
 .pill {
@@ -346,18 +453,33 @@ main {
 .seg {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--side);
+  border: 1px solid var(--line);
 }
 .seg button {
-  border: 1px solid var(--line);
-  background: var(--bg);
-  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 10px;
   padding: 10px 12px;
+  font-weight: 650;
+}
+.seg button svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
 }
 .seg button.active {
-  background: var(--accent);
-  color: var(--bg);
-  border-color: var(--accent);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow);
 }
 .tool-list {
   display: grid;

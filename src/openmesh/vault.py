@@ -11,6 +11,12 @@ ALL_TOOLS = {
     "fs_list",
     "fs_read",
     "fs_write",
+    "inbox_list",
+    "inbox_read",
+    "doc_write",
+    "schedule_task",
+    "list_schedule",
+    "cancel_schedule",
     "http_fetch",
     "shell",
 }

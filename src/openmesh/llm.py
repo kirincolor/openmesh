@@ -14,7 +14,7 @@ class LLMError(RuntimeError):
 class LLM:
     def __init__(self, provider: ProviderConfig) -> None:
         self.provider = provider
-        self._client = httpx.Client(timeout=120.0)
+        self._client = httpx.Client(timeout=180.0)
 
     def complete(
         self,

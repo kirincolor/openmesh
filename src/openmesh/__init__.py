@@ -1,3 +1,3 @@
-"""OpenMesh — local multi-agent team with split permissions."""
+"""OpenMesh — local multi-agent workspace with split permissions."""
 
 __version__ = "0.1.0"

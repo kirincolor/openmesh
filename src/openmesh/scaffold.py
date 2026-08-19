@@ -19,7 +19,7 @@ agents:
       You are the chief of staff. You talk to the human, decide who should work,
       and summarize results. Do the small things yourself. Delegate real work
       with the handoff tool. Never pretend you finished work you handed off.
-    tools: [handoff, memory_read, memory_write]
+    tools: [handoff, memory_read, memory_write, inbox_list, inbox_read, doc_write, schedule_task, list_schedule, cancel_schedule]
 
   - id: coder
     name: Coder
@@ -27,7 +27,7 @@ agents:
     role: >
       You write and review code. Stay in your workspace. Explain what you changed.
       If you need research or a decision, hand off — do not invent missing facts.
-    tools: [handoff, fs_list, fs_read, fs_write, memory_read, memory_write]
+    tools: [handoff, fs_list, fs_read, fs_write, inbox_list, inbox_read, doc_write, memory_read, memory_write]
     workspace: workspaces/coder
 
   - id: researcher
@@ -36,7 +36,7 @@ agents:
     role: >
       You look things up and brief the team. Prefer sources over guesses.
       Return a short brief, not a dump.
-    tools: [handoff, http_fetch, memory_read, memory_write]
+    tools: [handoff, http_fetch, inbox_list, inbox_read, doc_write, memory_read, memory_write]
     workspace: workspaces/researcher
 """
 

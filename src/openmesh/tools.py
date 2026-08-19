@@ -8,6 +8,8 @@ from urllib.parse import urljoin
 import httpx
 
 from .config import AgentConfig
+from .files import FileError, FileStore
+from .jobs import JobError, ScheduleIn, WorkStore
 from .memory import Memory
 from .ssrf import blocked_reason
 from .vault import Vault, VaultDenied
@@ -82,6 +84,34 @@ SCHEMAS: dict[str, dict[str, Any]] = {
             "required": ["path", "content"],
         },
     },
+    "inbox_list": {
+        "name": "inbox_list",
+        "description": "List files and documents attached to this chat.",
+        "parameters": {"type": "object", "properties": {}},
+    },
+    "inbox_read": {
+        "name": "inbox_read",
+        "description": "Read a text file or document from this chat by id or filename.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "description": "File id or filename"},
+            },
+            "required": ["file"],
+        },
+    },
+    "doc_write": {
+        "name": "doc_write",
+        "description": "Write a markdown document into this chat so the human can download it.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "content": {"type": "string"},
+            },
+            "required": ["title", "content"],
+        },
+    },
     "http_fetch": {
         "name": "http_fetch",
         "description": "GET a public URL and return text (truncated).",
@@ -100,13 +130,45 @@ SCHEMAS: dict[str, dict[str, Any]] = {
             "required": ["command"],
         },
     },
+    "schedule_task": {
+        "name": "schedule_task",
+        "description": "Schedule a follow-up message in this chat. Set exactly one of every_seconds, cron, or at.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "text": {"type": "string", "description": "What to send when it fires"},
+                "every_seconds": {"type": "integer", "description": "Repeat interval, min 30"},
+                "cron": {"type": "string", "description": "5-field cron, e.g. 0 9 * * 1"},
+                "at": {"type": "string", "description": "ISO datetime or unix timestamp, once"},
+            },
+            "required": ["text"],
+        },
+    },
+    "list_schedule": {
+        "name": "list_schedule",
+        "description": "List scheduled tasks for this mesh.",
+        "parameters": {"type": "object", "properties": {}},
+    },
+    "cancel_schedule": {
+        "name": "cancel_schedule",
+        "description": "Cancel a scheduled task by id.",
+        "parameters": {
+            "type": "object",
+            "properties": {"id": {"type": "string"}},
+            "required": ["id"],
+        },
+    },
 }
 
 
 class Toolbelt:
-    def __init__(self, vault: Vault, memory: Memory) -> None:
+    def __init__(self, vault: Vault, memory: Memory, files: FileStore, work: WorkStore) -> None:
         self.vault = vault
         self.memory = memory
+        self.files = files
+        self.work = work
+        self.thread = "main"
 
     def openai_tools(self, agent: AgentConfig) -> list[dict[str, Any]]:
         return [
@@ -115,8 +177,9 @@ class Toolbelt:
             if name in SCHEMAS
         ]
 
-    def run(self, agent: AgentConfig, name: str, args: dict[str, Any]) -> str:
+    def run(self, agent: AgentConfig, name: str, args: dict[str, Any], thread: str = "main") -> str:
         self.vault.check(agent, name)
+        self.thread = thread
         handler = getattr(self, f"_tool_{name}", None)
         if handler is None:
             raise VaultDenied(f"unknown tool: {name}")
@@ -174,6 +237,33 @@ class Toolbelt:
         target.write_text(str(args.get("content") or ""), encoding="utf-8")
         return f"wrote {args['path']}"
 
+    def _tool_inbox_list(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        items = self.files.list_thread(self.thread)
+        if not items:
+            return "(no files in this chat)"
+        return "\n".join(f"{item.id}  {item.name}  {item.size}B  {item.kind}" for item in items)
+
+    def _tool_inbox_read(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        key = str(args.get("file") or args.get("path") or "").strip()
+        if not key:
+            return "inbox_read needs file id or name"
+        try:
+            record = self.files.find_in_thread(self.thread, key)
+            return self.files.read_text(record.id, self.thread)
+        except (FileError, KeyError) as exc:
+            return str(exc)
+
+    def _tool_doc_write(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        title = str(args.get("title") or "").strip()
+        content = str(args.get("content") or "")
+        if not title:
+            return "doc_write needs a title"
+        try:
+            record = self.files.write_doc(self.thread, title, content)
+        except FileError as exc:
+            return str(exc)
+        return f"FILE::{record.id}::{record.name}::{record.size}"
+
     def _tool_http_fetch(self, agent: AgentConfig, args: dict[str, Any]) -> str:
         url = str(args.get("url") or "")
         for _ in range(4):
@@ -226,3 +316,41 @@ class Toolbelt:
             return f"exec failed: {exc}"
         out = (proc.stdout or "") + (proc.stderr or "")
         return (out or f"exit {proc.returncode}")[:8000]
+
+    def _tool_schedule_task(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        every = args.get("every_seconds")
+        try:
+            item = self.work.add_schedule(
+                ScheduleIn(
+                    title=str(args.get("title") or ""),
+                    thread=self.thread,
+                    text=str(args.get("text") or ""),
+                    every_seconds=int(every) if every not in (None, "") else None,
+                    cron=str(args["cron"]) if args.get("cron") else None,
+                    at=str(args["at"]) if args.get("at") else None,
+                )
+            )
+        except JobError as exc:
+            return str(exc)
+        when = item.cron or (f"every {item.every_seconds}s" if item.every_seconds else f"at {item.at_ts}")
+        return f"scheduled {item.id} ({when}): {item.title}"
+
+    def _tool_list_schedule(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        if not self.work.schedules:
+            return "(no schedules)"
+        lines = []
+        for item in self.work.schedules:
+            state = "on" if item.enabled else "off"
+            when = item.cron or (f"every {item.every_seconds}s" if item.every_seconds else f"at {item.at_ts}")
+            lines.append(f"{item.id}  {state}  {when}  {item.thread}  {item.title}")
+        return "\n".join(lines)
+
+    def _tool_cancel_schedule(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        schedule_id = str(args.get("id") or "").strip()
+        if not schedule_id:
+            return "cancel_schedule needs id"
+        try:
+            self.work.delete_schedule(schedule_id)
+        except KeyError:
+            return f"unknown schedule: {schedule_id}"
+        return f"cancelled {schedule_id}"

@@ -10,7 +10,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 Listener = Callable[["Event"], Awaitable[None] | None]
-PERSIST_KINDS = {"user", "agent", "system", "tool", "handoff", "error"}
+PERSIST_KINDS = {"user", "agent", "system", "tool", "handoff", "error", "file"}
 
 
 class Event(BaseModel):
@@ -25,6 +25,7 @@ class Event(BaseModel):
         "handoff",
         "error",
         "status",
+        "file",
     ] = "system"
     sender: str
     to: str | None = None
@@ -53,8 +54,18 @@ class Bus:
 
     def clear(self) -> None:
         self.events.clear()
-        if self.path and self.path.exists():
-            self.path.write_text("", encoding="utf-8")
+        self._rewrite()
+
+    def clear_thread(self, thread: str) -> None:
+        self.events = [event for event in self.events if event.thread != thread]
+        self._rewrite()
+
+    def _rewrite(self) -> None:
+        if not self.path:
+            return
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        lines = [event.model_dump_json() for event in self.events if event.kind in PERSIST_KINDS]
+        self.path.write_text(("\n".join(lines) + "\n") if lines else "", encoding="utf-8")
 
     async def publish(self, event: Event) -> Event:
         self.events.append(event)

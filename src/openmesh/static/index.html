@@ -21,7 +21,13 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <input id="search" type="search" autocomplete="off" />
       </label>
-      <button type="button" id="add-agent" class="icon-btn" data-i18n-title="addTeammate">+</button>
+      <div class="add-wrap">
+        <button type="button" id="add-menu-btn" class="icon-btn" data-i18n-title="add">+</button>
+        <div id="add-menu" class="menu hidden">
+          <button type="button" id="add-agent" data-i18n="addTeammate">Add teammate</button>
+          <button type="button" id="add-group" data-i18n="newGroup">New group</button>
+        </div>
+      </div>
     </div>
     <div id="agents" class="agent-list"></div>
     <div class="side-bottom">
@@ -39,10 +45,14 @@
   <main>
     <header class="chat-header">
       <span id="header-avatar" class="avatar">CH</span>
-      <div>
+      <div id="header-faces" class="faces hidden"></div>
+      <div class="chat-title">
         <h1 id="header-name">Chief</h1>
         <p id="header-sub"></p>
       </div>
+      <select id="chat-model" class="model-pick" data-i18n-title="model"></select>
+      <button type="button" id="stop-job" class="header-btn hidden" data-i18n="stop">Stop</button>
+      <button type="button" id="manage-chat" class="header-btn hidden" data-i18n="manageGroup">Manage</button>
     </header>
     <div id="banner" class="banner hidden"></div>
     <section id="log" class="log">
@@ -50,7 +60,11 @@
     </section>
     <form id="composer">
       <div class="pill">
-        <button type="button" id="mention" class="icon-btn ghost" data-i18n-title="mention">+</button>
+        <div class="add-wrap">
+          <button type="button" id="mention" class="icon-btn ghost" data-i18n-title="attach">+</button>
+          <div id="mention-menu" class="menu up hidden"></div>
+        </div>
+        <input id="file-input" class="hidden" type="file" multiple />
         <textarea id="input" rows="1"></textarea>
         <button type="submit" id="send" class="send" data-i18n-title="send">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3.4 20.6 21 13.2c.8-.3.8-1.4 0-1.8L3.4 3.9c-.9-.4-1.8.5-1.5 1.4L4 11l8 1-8 1-2.1 5.7c-.3.9.6 1.8 1.5 1.4Z"/></svg>
@@ -82,8 +96,14 @@
         <h3 data-i18n="appearance">Appearance</h3>
         <label data-i18n="theme">Theme</label>
         <div class="seg" id="theme-seg">
-          <button type="button" data-theme="light" data-i18n="light">Light</button>
-          <button type="button" data-theme="dark" data-i18n="dark">Dark</button>
+          <button type="button" data-theme="light">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><path fill="currentColor" d="M12 2.5a1 1 0 0 1 1 1V5a1 1 0 1 1-2 0V3.5a1 1 0 0 1 1-1Zm0 14.5a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V18a1 1 0 0 1 1-1ZM3.5 11a1 1 0 0 0 0 2H5a1 1 0 1 0 0-2H3.5Zm14.5 0a1 1 0 1 0 0 2h1.5a1 1 0 1 0 0-2H18ZM5.6 5.6a1 1 0 0 1 1.4 0l1.1 1.1a1 1 0 0 1-1.4 1.4L5.6 7A1 1 0 0 1 5.6 5.6Zm10.3 10.3a1 1 0 0 1 1.4 0l1.1 1.1a1 1 0 1 1-1.4 1.4l-1.1-1.1a1 1 0 0 1 0-1.4ZM18.4 5.6A1 1 0 0 1 18.4 7l-1.1 1.1a1 1 0 1 1-1.4-1.4l1.1-1.1a1 1 0 0 1 1.4 0ZM7 16.9a1 1 0 0 1 0 1.4l-1.1 1.1A1 1 0 0 1 4.5 18l1.1-1.1A1 1 0 0 1 7 16.9Z"/></svg>
+            <span data-i18n="light">Light</span>
+          </button>
+          <button type="button" data-theme="dark">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.2 3.1a1 1 0 0 1 1.1 1.4A8 8 0 1 0 19.5 17a1 1 0 0 1 1.7.9 10 10 0 1 1-7.4-15.4 1 1 0 0 1 1.4.6Z"/></svg>
+            <span data-i18n="dark">Dark</span>
+          </button>
         </div>
         <label data-i18n="language">Language</label>
         <div class="seg" id="lang-seg">
@@ -92,8 +112,22 @@
         </div>
       </section>
       <section class="card">
-        <h3 data-i18n="room">Room</h3>
-        <button type="button" id="clear-room" class="ghost-btn" data-i18n="clearRoom">Clear room</button>
+        <h3 data-i18n="schedules">Schedules</h3>
+        <p class="hint" data-i18n="scheduleHint"></p>
+        <label for="sched-title" data-i18n="title">Title</label>
+        <input id="sched-title" />
+        <label for="sched-text" data-i18n="scheduleText">Message</label>
+        <textarea id="sched-text" rows="3"></textarea>
+        <label for="sched-every" data-i18n="everyMinutes">Every (minutes)</label>
+        <input id="sched-every" type="text" inputmode="numeric" />
+        <label for="sched-cron" data-i18n="cron">Or cron (m h dom mon dow)</label>
+        <input id="sched-cron" />
+        <button type="button" id="save-schedule" class="primary" data-i18n="addSchedule">Add schedule</button>
+        <div id="schedule-list" class="schedule-list"></div>
+      </section>
+      <section class="card">
+        <h3 data-i18n="thisChat">This chat</h3>
+        <button type="button" id="clear-room" class="ghost-btn" data-i18n="clearChat">Clear this chat</button>
       </section>
     </div>
   </section>
@@ -121,6 +155,43 @@
           <button type="submit" class="primary" data-i18n="saveTeammate">Save teammate</button>
           <button type="button" id="delete-agent" class="danger hidden" data-i18n="deleteTeammate">Delete</button>
         </div>
+      </form>
+    </div>
+  </section>
+
+  <section id="page-group" class="page hidden" aria-hidden="true">
+    <header class="page-header">
+      <button type="button" class="back" id="close-group" data-i18n="back">Back</button>
+      <h2 id="group-title-label">New group</h2>
+    </header>
+    <div class="page-body">
+      <form id="group-form" class="card">
+        <input type="hidden" id="group-id" />
+        <label for="group-name" data-i18n="groupName">Group name</label>
+        <input id="group-name" />
+        <label data-i18n="members">Members</label>
+        <p class="hint" data-i18n="membersHint"></p>
+        <div id="member-list" class="tool-list"></div>
+        <div class="row-actions">
+          <button type="submit" class="primary" data-i18n="saveGroup">Save group</button>
+          <button type="button" id="delete-group" class="danger hidden" data-i18n="deleteGroup">Delete group</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section id="page-doc" class="page hidden" aria-hidden="true">
+    <header class="page-header">
+      <button type="button" class="back" id="close-doc" data-i18n="back">Back</button>
+      <h2 data-i18n="newDoc">New document</h2>
+    </header>
+    <div class="page-body">
+      <form id="doc-form" class="card">
+        <label for="doc-title" data-i18n="docTitle">Title</label>
+        <input id="doc-title" required />
+        <label for="doc-body" data-i18n="docBody">Document</label>
+        <textarea id="doc-body" rows="16"></textarea>
+        <button type="submit" class="primary" data-i18n="saveDoc">Save to this chat</button>
       </form>
     </div>
   </section>

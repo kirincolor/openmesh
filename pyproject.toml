@@ -1,7 +1,7 @@
 [project]
 name = "openmesh"
 version = "0.1.0"
-description = "Local multi-agent Mesh: your API keys, split permissions, group chat."
+description = "Local multi-agent workspace: split permissions, private chats, harness, your API keys."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -13,6 +13,7 @@ dependencies = [
   "pydantic>=2.9.0",
   "pyyaml>=6.0.2",
   "python-dotenv>=1.0.1",
+  "python-multipart>=0.0.9",
 ]
 
 [project.scripts]
