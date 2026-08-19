@@ -1,6 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
 import sys
 from PyInstaller.utils.hooks import collect_all
+
+ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
+ENTRY = os.path.join(ROOT, "src", "openmesh", "__main__.py")
 
 datas = []
 binaries = []
@@ -46,8 +50,8 @@ except Exception:
     pass
 
 a = Analysis(
-    ["src/openmesh/__main__.py"],
-    pathex=[],
+    [ENTRY],
+    pathex=[os.path.join(ROOT, "src")],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,

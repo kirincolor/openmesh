@@ -63,7 +63,7 @@ def create_app(config: MeshConfig | None = None) -> FastAPI:
         stop.set()
         task.cancel()
 
-    app = FastAPI(title="OpenMesh", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="OpenMesh", version="0.2.1", lifespan=lifespan)
     app.state.mesh = mesh
 
     @app.get("/api/state")
