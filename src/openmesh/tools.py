@@ -159,15 +159,101 @@ SCHEMAS: dict[str, dict[str, Any]] = {
             "required": ["id"],
         },
     },
+    "pc_list": {
+        "name": "pc_list",
+        "description": "List files in an allowed computer folder.",
+        "parameters": {
+            "type": "object",
+            "properties": {"path": {"type": "string", "default": "."}},
+        },
+    },
+    "pc_read": {
+        "name": "pc_read",
+        "description": "Read a text file from an allowed computer folder.",
+        "parameters": {
+            "type": "object",
+            "properties": {"path": {"type": "string"}},
+            "required": ["path"],
+        },
+    },
+    "pc_write": {
+        "name": "pc_write",
+        "description": "Write a file in an allowed computer folder.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "content": {"type": "string"},
+            },
+            "required": ["path", "content"],
+        },
+    },
+    "pc_run": {
+        "name": "pc_run",
+        "description": "Run a command in an allowed computer folder. No shell expansion.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "command": {"type": "string"},
+                "cwd": {"type": "string", "description": "Folder inside an allowed root"},
+                "timeout": {"type": "integer", "default": 60},
+            },
+            "required": ["command"],
+        },
+    },
+    "skill_list": {
+        "name": "skill_list",
+        "description": "List installed local skills (SKILL.md files).",
+        "parameters": {"type": "object", "properties": {}},
+    },
+    "skill_read": {
+        "name": "skill_read",
+        "description": "Read a local skill so you can follow its instructions.",
+        "parameters": {
+            "type": "object",
+            "properties": {"skill": {"type": "string"}},
+            "required": ["skill"],
+        },
+    },
+    "plugin_list": {
+        "name": "plugin_list",
+        "description": "List local plugins and the tools they expose.",
+        "parameters": {"type": "object", "properties": {}},
+    },
+    "plugin_run": {
+        "name": "plugin_run",
+        "description": "Run a tool from a local plugin.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "plugin": {"type": "string"},
+                "tool": {"type": "string"},
+                "args": {"type": "object"},
+            },
+            "required": ["plugin", "tool"],
+        },
+    },
 }
 
 
 class Toolbelt:
-    def __init__(self, vault: Vault, memory: Memory, files: FileStore, work: WorkStore) -> None:
+    def __init__(
+        self,
+        vault: Vault,
+        memory: Memory,
+        files: FileStore,
+        work: WorkStore,
+        computer: Any = None,
+        skills: Any = None,
+        plugins: Any = None,
+    ) -> None:
         self.vault = vault
         self.memory = memory
         self.files = files
         self.work = work
+        self.computer = computer
+        self.skills = skills
+        self.plugins = plugins
         self.thread = "main"
 
     def openai_tools(self, agent: AgentConfig) -> list[dict[str, Any]]:
@@ -354,3 +440,89 @@ class Toolbelt:
         except KeyError:
             return f"unknown schedule: {schedule_id}"
         return f"cancelled {schedule_id}"
+
+    def _tool_pc_list(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        if self.computer is None:
+            return "computer is not available"
+        try:
+            target = self.computer.resolve(str(args.get("path") or "."))
+        except VaultDenied as exc:
+            return str(exc)
+        if not target.exists():
+            return "(missing)"
+        if target.is_file():
+            return target.name
+        names = sorted(p.name + ("/" if p.is_dir() else "") for p in target.iterdir())
+        return "\n".join(names) or "(empty)"
+
+    def _tool_pc_read(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        if self.computer is None:
+            return "computer is not available"
+        try:
+            target = self.computer.resolve(str(args.get("path") or ""))
+        except VaultDenied as exc:
+            return str(exc)
+        if not target.is_file():
+            return "not a file"
+        return target.read_text(encoding="utf-8", errors="replace")[:20_000]
+
+    def _tool_pc_write(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        if self.computer is None:
+            return "computer is not available"
+        rel = str(args.get("path") or "")
+        try:
+            target = self.computer.resolve(rel)
+        except VaultDenied as exc:
+            return str(exc)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(str(args.get("content") or ""), encoding="utf-8")
+        return f"wrote {rel}"
+
+    def _tool_pc_run(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        if self.computer is None:
+            return "computer is not available"
+        timeout = args.get("timeout")
+        try:
+            seconds = int(timeout) if timeout not in (None, "") else 60
+        except (TypeError, ValueError):
+            seconds = 60
+        try:
+            return self.computer.run(
+                str(args.get("command") or ""),
+                cwd=str(args["cwd"]) if args.get("cwd") else None,
+                timeout=seconds,
+            )
+        except VaultDenied as exc:
+            return str(exc)
+
+    def _tool_skill_list(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        if self.skills is None:
+            return "skills are not available"
+        items = self.skills.list()
+        if not items:
+            return "(no skills). Put SKILL.md files in the skills/ folder."
+        return "\n".join(f"{item['id']}: {item['title']}" for item in items)
+
+    def _tool_skill_read(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        if self.skills is None:
+            return "skills are not available"
+        return self.skills.read(str(args.get("skill") or args.get("id") or ""))
+
+    def _tool_plugin_list(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        if self.plugins is None:
+            return "plugins are not available"
+        items = self.plugins.list()
+        if not items:
+            return "(no plugins). Each plugin is a folder with plugin.json."
+        lines = []
+        for item in items:
+            tools = ", ".join(item.get("tools") or []) or "no tools"
+            lines.append(f"{item['id']}: {item['name']} — {item['description']} [{tools}]")
+        return "\n".join(lines)
+
+    def _tool_plugin_run(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        if self.plugins is None:
+            return "plugins are not available"
+        extra = args.get("args")
+        payload = extra if isinstance(extra, dict) else {}
+        return self.plugins.run(str(args.get("plugin") or ""), str(args.get("tool") or ""), payload)

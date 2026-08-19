@@ -5,13 +5,17 @@ from typing import Any
 
 from .bus import Bus, Event
 from .chats import Chat, ChatDirectory, dm_id
+from .computer import Computer
 from .files import FileStore
 from .harness import Harness
 from .jobs import WorkStore
-from .config import AgentConfig, MeshConfig
+from .config import AgentConfig, MeshConfig, ProviderConfig
 from .llm import LLM, LLMError
 from .memory import Memory
+from .plugins import PluginBook
 from .prefs import load_prefs
+from .providers import Account, ProviderBook
+from .skills import SkillBook
 from .tools import Toolbelt
 from .vault import ALL_TOOLS, Vault
 
@@ -29,8 +33,15 @@ class Mesh:
         self.work = WorkStore(config.root)
         self.vault = Vault(config)
         self.memory = Memory(config)
-        self.tools = Toolbelt(self.vault, self.memory, self.files, self.work)
-        self.llm = LLM(config.provider)
+        self.providers = ProviderBook(config.root)
+        self.providers.migrate_from(config.provider)
+        self.computer = Computer(config.root)
+        self.skills = SkillBook(config.root)
+        self.plugins = PluginBook(config.root)
+        self.tools = Toolbelt(
+            self.vault, self.memory, self.files, self.work, self.computer, self.skills, self.plugins
+        )
+        self.llm = LLM(self._default_provider())
         self.harness = Harness(self.llm, self.tools)
         self.locks: dict[str, asyncio.Lock] = {}
         self.busy: set[str] = set()
@@ -38,13 +49,15 @@ class Mesh:
         self._tick_lock = asyncio.Lock()
 
     def snapshot(self) -> dict[str, Any]:
+        default = self.providers.default()
         return {
             "mesh": self.config.mesh.model_dump(),
             "running": self.running,
             "provider": {
-                "base_url": self.config.provider.base_url,
-                "model": self.config.provider.model,
-                "has_key": bool(self.config.provider.api_key),
+                "base_url": default.base_url if default else self.config.provider.base_url,
+                "model": default.model if default else self.config.provider.model,
+                "has_key": self.providers.has_key() or bool(self.config.provider.api_key),
+                "accounts": self.providers.public(),
             },
             "prefs": load_prefs(self.config.root).model_dump(),
             "tools": sorted(ALL_TOOLS),
@@ -62,11 +75,41 @@ class Mesh:
             "jobs": [item.model_dump() for item in self.work.runs[-20:]],
             "schedules": [item.model_dump() for item in self.work.schedules],
             "models": {
-                "default": self.config.provider.model,
-                "options": self.work.model_options(self.config.provider.model),
+                "default": default.id if default else "",
+                "options": self.providers.options(),
                 "by_chat": dict(self.work.chat_models),
             },
+            "computer": {"roots": self.computer.public()},
+            "skills": self.skills.list(),
+            "plugins": self.plugins.list(),
         }
+
+    def _default_provider(self) -> ProviderConfig:
+        account = self.providers.default()
+        if account:
+            return self.providers.to_config(account)
+        return self.config.provider
+
+    def sync_llm(self) -> None:
+        self.config.provider = self._default_provider()
+        self.llm.provider = self.config.provider
+
+    def has_key(self) -> bool:
+        return self.providers.has_key() or bool(self.config.provider.api_key)
+
+    def account_for(self, thread: str, preferred: str | None = None) -> Account | None:
+        keys = [preferred, self.work.model_for(thread, "")]
+        for key in keys:
+            if not key:
+                continue
+            found = self.providers.get(key)
+            if found:
+                return found
+        if preferred:
+            for item in self.providers.accounts:
+                if item.model == preferred:
+                    return item
+        return self.providers.default()
 
     def _sorted_chats(self) -> list[Chat]:
         chats = self.chats.all_chats(self.config)
@@ -124,8 +167,10 @@ class Mesh:
         if not text:
             raise ValueError("empty message")
         thread = self.resolve_thread(thread, to)
-        if model:
-            self.work.set_chat_model(thread, model)
+        account = self.account_for(thread, model)
+        if model or (account and not self.work.chat_models.get(thread)):
+            if account:
+                self.work.set_chat_model(thread, account.id)
         event = Event(kind="user", sender=sender, text=text, thread=thread)
         lock = self._lock_for(thread)
         async with lock:
@@ -135,7 +180,7 @@ class Mesh:
             run = self.work.start_run(
                 thread,
                 text,
-                self.work.model_for(thread, self.config.provider.model),
+                account.id if account else self.work.model_for(thread, self.config.provider.model),
             )
             try:
                 await self.bus.publish(event)
@@ -229,10 +274,18 @@ class Mesh:
             )
             return
         agent = self.config.agent(agent_id)
-        chosen = model or self.work.model_for(thread, agent.model or self.config.provider.model)
+        account = self.account_for(thread, model)
+        provider = self.providers.to_config(account) if account else self._default_provider()
+        chosen = provider.model
         self.busy.add(agent.id)
         await self.bus.publish(
-            Event(kind="status", sender=agent.id, text="thinking", thread=thread, meta={"model": chosen})
+            Event(
+                kind="status",
+                sender=agent.id,
+                text="thinking",
+                thread=thread,
+                meta={"model": chosen, "account": account.id if account else ""},
+            )
         )
         queue: asyncio.Queue[Event] = asyncio.Queue()
         loop = asyncio.get_running_loop()
@@ -255,6 +308,7 @@ class Mesh:
                 self._prompt(agent, thread),
                 thread,
                 chosen,
+                account=provider,
                 emit=emit,
                 should_stop=(lambda: bool(run_id and self.work.is_cancelled(run_id))),
             )
@@ -342,6 +396,9 @@ class Mesh:
         inbox = "\n".join(
             f"- {item.id} {item.name} ({item.size} bytes, {item.kind})" for item in attachments
         ) or "(none)"
+        folders = "\n".join(f"- {path}" for path in self.computer.public()) or "(none)"
+        skill_names = ", ".join(item["id"] for item in self.skills.list()) or "(none)"
+        plugin_names = ", ".join(item["id"] for item in self.plugins.list()) or "(none)"
         system = f"""You are {agent.name} ({agent.id}) on a local Mesh named {self.config.mesh.name}.
 {agent.role.strip()}
 
@@ -352,7 +409,10 @@ Rules:
 - Use only your tools. The vault will block anything else.
 - Keep answers short.
 - Do not claim you used a tool you did not use.
-- File tools only see your workspace.
+- File tools (fs_*) only see your workspace.
+- Computer tools (pc_*) can create files and run commands only inside the folders the human allowed.
+- Use skill_list / skill_read before doing specialized work. Follow the skill.
+- Use plugin_list / plugin_run for installed local plugins.
 - Chat attachments are listed below. Use inbox_list / inbox_read to open them.
 - Use doc_write to put a markdown document into this chat for the human to download.
 - Long jobs are OK. Keep using tools until the work is done. The harness will continue you if you hit a round limit.
@@ -363,6 +423,12 @@ Teammates:
 
 Attachments in this chat:
 {inbox}
+
+Allowed computer folders:
+{folders}
+
+Installed skills: {skill_names}
+Installed plugins: {plugin_names}
 
 Shared memory:
 {shared or "(empty)"}

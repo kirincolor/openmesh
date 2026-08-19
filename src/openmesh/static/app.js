@@ -28,12 +28,27 @@ const I18N = {
     send: "Send",
     back: "Back",
     provider: "Provider",
+    apis: "API accounts",
+    apiName: "Name",
+    addApi: "New API",
+    saveApi: "Save API",
+    deleteApi: "Delete",
+    noApis: "No APIs yet. Add one below. The chat header only lists these.",
+    confirmDeleteApi: "Remove this API from this machine?",
+    computer: "This computer",
+    computerHint: "Agents may create files and run commands only in these folders. One path per line.",
+    folders: "Folders",
+    saveFolders: "Save folders",
+    skills: "Skills",
+    plugins: "Plugins",
+    skillsHint: "Drop SKILL.md files in the skills/ folder. A plugin is a folder with plugin.json.",
     status: "Status",
     model: "Model",
     apiKey: "API key",
     baseUrl: "Base URL",
     saveLocally: "Save locally",
-    keyHint: "Saved to this machine's .env only. Works with OpenAI, DeepSeek, Groq, or Ollama.",
+    keyHint: "Keys stay on this machine. Add as many OpenAI-compatible APIs as you want. The header picker uses only this list.",
+    apiNamePlaceholder: "OpenAI",
     appearance: "Appearance",
     theme: "Theme",
     light: "Light",
@@ -108,12 +123,27 @@ const I18N = {
     send: "发送",
     back: "返回",
     provider: "模型服务",
+    apis: "API 账号",
+    apiName: "名称",
+    addApi: "新 API",
+    saveApi: "保存 API",
+    deleteApi: "删除",
+    noApis: "还没有 API。在下面添加。聊天顶栏只显示这里配置过的。",
+    confirmDeleteApi: "从这台机器删除这个 API？",
+    computer: "这台电脑",
+    computerHint: "同事只能在这些文件夹里建文件、跑命令。一行一个路径。",
+    folders: "文件夹",
+    saveFolders: "保存文件夹",
+    skills: "Skills",
+    plugins: "插件",
+    skillsHint: "把 SKILL.md 放到 skills/ 文件夹。插件是带 plugin.json 的文件夹。",
     status: "状态",
     model: "模型",
     apiKey: "API 密钥",
     baseUrl: "接口地址",
     saveLocally: "保存到本机",
-    keyHint: "只写入这台机器的 .env，不会上传。兼容 OpenAI / DeepSeek / Groq / Ollama。",
+    keyHint: "密钥只留在这台机器。可以加多个兼容 OpenAI 的接口。顶栏选择器只用这份列表。",
+    apiNamePlaceholder: "OpenAI",
     appearance: "外观",
     theme: "主题",
     light: "浅色",
@@ -167,6 +197,7 @@ let state = { agents: [], chats: [], events: [], provider: {}, mesh: {}, running
 const seen = new Set();
 let bannerKind = "";
 let selectedChat = localStorage.getItem("openmesh.chat") || "";
+let paintedChat = "";
 let prefs = { theme: "light", language: "en" };
 let searchQuery = "";
 
@@ -206,9 +237,12 @@ function paintI18n() {
     node.textContent = t(node.dataset.i18n);
   }
   for (const node of document.querySelectorAll("[data-i18n-title]")) {
-    node.title = t(node.dataset.i18nTitle);
+    const text = t(node.dataset.i18nTitle);
+    node.title = text;
+    if (node.tagName === "BUTTON") node.setAttribute("aria-label", text);
   }
   $("search").placeholder = t("search");
+  $("api-name").placeholder = t("apiNamePlaceholder");
   $("api-key").placeholder = t("keyPlaceholder");
   $("base-url").placeholder = t("urlPlaceholder");
   $("model").placeholder = t("modelPlaceholder");
@@ -317,6 +351,7 @@ function renderChats() {
 
 function selectChat(id) {
   selectedChat = id;
+  paintedChat = id;
   localStorage.setItem("openmesh.chat", id);
   resetLog();
   for (const event of state.events || []) addEvent(event);
@@ -357,15 +392,23 @@ function renderHeader() {
   $("send").disabled = busyHere;
 }
 
+function modelOptions() {
+  return (state.models?.options || []).map((item) =>
+    typeof item === "string" ? { id: item, label: item } : item
+  );
+}
+
 function renderModels() {
   const box = $("chat-model");
-  const options = state.models?.options || [state.provider?.model || "gpt-4o-mini"];
-  const current = state.models?.by_chat?.[selectedChat] || state.models?.default || state.provider?.model || options[0];
+  const options = modelOptions();
+  const ids = options.map((item) => item.id);
+  const current = state.models?.by_chat?.[selectedChat] || state.models?.default || ids[0] || "";
   const value = box.value;
   box.innerHTML = options
-    .map((id) => `<option value="${escapeAttr(id)}">${escapeHtml(id)}</option>`)
+    .map((item) => `<option value="${escapeAttr(item.id)}">${escapeHtml(item.label || item.id)}</option>`)
     .join("");
-  box.value = options.includes(value) ? value : current;
+  box.value = ids.includes(value) ? value : ids.includes(current) ? current : ids[0] || "";
+  box.disabled = !ids.length;
 }
 
 function renderSchedules() {
@@ -389,15 +432,79 @@ function renderSchedules() {
   }
 }
 
+function accounts() {
+  return state.provider?.accounts || [];
+}
+
+function renderApis() {
+  const items = accounts();
+  $("api-list").innerHTML = items.length
+    ? items
+        .map((item) => {
+          const status = item.has_key ? t("keyOnDisk") : t("noKeyStatus");
+          return `<div class="schedule-row">
+            <span><b>${escapeHtml(item.name)}</b><br/><small>${escapeHtml(item.model)} · ${escapeHtml(status)}</small></span>
+            <span class="row-btns">
+              <button type="button" data-edit-api="${escapeAttr(item.id)}">✎</button>
+              <button type="button" data-del-api="${escapeAttr(item.id)}">×</button>
+            </span>
+          </div>`;
+        })
+        .join("")
+    : `<p class="hint">${escapeHtml(t("noApis"))}</p>`;
+  for (const btn of document.querySelectorAll("[data-edit-api]")) {
+    btn.addEventListener("click", () => fillApi(btn.dataset.editApi));
+  }
+  for (const btn of document.querySelectorAll("[data-del-api]")) {
+    btn.addEventListener("click", () => deleteApi(btn.dataset.delApi));
+  }
+}
+
+function fillApi(id) {
+  const item = accounts().find((acc) => acc.id === id);
+  if (!item) return;
+  $("api-id").value = item.id;
+  $("api-name").value = item.name;
+  $("base-url").value = item.base_url || "";
+  $("model").value = item.model || "";
+  $("api-key").value = "";
+  $("api-key").placeholder = item.has_key ? t("keyOnDisk") : t("keyPlaceholder");
+}
+
+function clearApiForm() {
+  $("api-id").value = "";
+  $("api-name").value = "";
+  $("api-key").value = "";
+  $("api-key").placeholder = t("keyPlaceholder");
+  $("base-url").value = "";
+  $("model").value = "";
+}
+
+function renderComputer() {
+  const roots = state.computer?.roots || [];
+  if (!$("computer-roots").value) $("computer-roots").value = roots.join("\n");
+  const skills = (state.skills || []).map((item) => item.id).join(", ");
+  const plugins = (state.plugins || []).map((item) => item.id).join(", ");
+  $("skill-list-view").textContent = skills || "—";
+  $("plugin-list-view").textContent = plugins || "—";
+}
+
 function renderMeta() {
+  const items = accounts();
+  const current = items.find((item) => item.id === state.models?.default) || items[0];
   $("key-status").textContent = state.provider?.has_key ? t("keyOnDisk") : t("noKeyStatus");
-  $("key-model").textContent = state.provider?.model || "—";
-  if (!$("base-url").value) $("base-url").value = state.provider?.base_url || "";
-  if (!$("model").value) $("model").value = state.provider?.model || "";
+  $("key-model").textContent = current ? `${current.name} · ${current.model}` : "—";
+  if (!$("api-id").value && !$("api-name").value && current) {
+    $("api-name").value = current.name;
+    if (!$("base-url").value) $("base-url").value = current.base_url || "";
+    if (!$("model").value) $("model").value = current.model || "";
+  }
   if (!state.provider?.has_key) setBanner(t("noKey"), "key");
   else if (bannerKind === "key") setBanner("");
   if (!(state.busy_threads || []).includes(selectedChat) && bannerKind === "busy") setBanner("");
   $("send").disabled = (state.busy_threads || []).includes(selectedChat);
+  renderApis();
+  renderComputer();
   renderSchedules();
   for (const btn of document.querySelectorAll("#theme-seg [data-theme]")) {
     btn.classList.toggle("active", btn.dataset.theme === prefs.theme);
@@ -435,7 +542,7 @@ function resetLog() {
 function addEvent(event) {
   if (!event?.id) return;
   if (!state.events.some((item) => item.id === event.id)) state.events.push(event);
-  if (event.thread && event.thread !== selectedChat) return;
+  if (event.thread !== selectedChat) return;
   if (seen.has(event.id)) return;
   seen.add(event.id);
   $("empty")?.classList.add("hidden");
@@ -506,7 +613,7 @@ function openEditor(id) {
   $("agent-role").value = agent?.role || "";
   $("editor-title").textContent = agent ? t("editTeammate") : t("newTeammate");
   $("delete-agent").classList.toggle("hidden", !agent);
-  renderTools(agent?.tools || ["handoff", "inbox_list", "inbox_read", "doc_write"]);
+  renderTools(agent?.tools || ["handoff", "inbox_list", "inbox_read", "doc_write", "skill_list", "skill_read"]);
   closePage("page-group");
   openPage("page-editor");
 }
@@ -528,6 +635,10 @@ async function refresh() {
   if (!selectedChat || !currentChat()) {
     selectedChat = state.chats?.[0]?.id || "";
     if (selectedChat) localStorage.setItem("openmesh.chat", selectedChat);
+  }
+  if (selectedChat !== paintedChat) {
+    resetLog();
+    paintedChat = selectedChat;
   }
   if (state.prefs) applyPrefs({ ...prefs, ...state.prefs });
   else paintI18n();
@@ -706,23 +817,60 @@ for (const btn of document.querySelectorAll("#lang-seg [data-lang]")) {
   btn.addEventListener("click", () => savePrefs({ language: btn.dataset.lang }));
 }
 
+$("new-api").addEventListener("click", () => clearApiForm());
+
 $("save-key").addEventListener("click", async () => {
+  const existing = $("api-id").value;
   const body = {
+    name: $("api-name").value.trim() || "API",
     api_key: $("api-key").value || undefined,
     base_url: $("base-url").value || undefined,
     model: $("model").value || undefined,
   };
-  const res = await fetch("/api/secrets", {
-    method: "POST",
+  const res = await fetch(existing ? `/api/providers/${encodeURIComponent(existing)}` : "/api/providers", {
+    method: existing ? "PUT" : "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({ detail: res.statusText }));
+  if (!res.ok) {
+    setBanner(data.detail || "save failed", "error");
+    return;
+  }
   $("api-key").value = "";
-  state.provider = { ...state.provider, has_key: data.has_key, model: $("model").value || state.provider.model };
-  renderMeta();
-  if (data.has_key && (bannerKind === "key" || !bannerKind)) setBanner(t("saved"), "ok");
+  if (data.account?.id) $("api-id").value = data.account.id;
+  await refresh();
+  setBanner(t("saved"), "ok");
 });
+
+$("save-computer").addEventListener("click", async () => {
+  const roots = $("computer-roots").value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const res = await fetch("/api/computer", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ roots }),
+  });
+  const data = await res.json().catch(() => ({ detail: res.statusText }));
+  if (!res.ok) {
+    setBanner(data.detail || "save failed", "error");
+    return;
+  }
+  $("computer-roots").value = (data.roots || roots).join("\n");
+  await refresh();
+  setBanner(t("saved"), "ok");
+});
+
+async function deleteApi(id) {
+  if (!id || !confirm(t("confirmDeleteApi"))) return;
+  const res = await fetch(`/api/providers/${encodeURIComponent(id)}`, { method: "DELETE" });
+  const data = await res.json().catch(() => ({ detail: res.statusText }));
+  if (!res.ok) {
+    setBanner(data.detail || "delete failed", "error");
+    return;
+  }
+  if ($("api-id").value === id) clearApiForm();
+  await refresh();
+}
 
 $("clear-room").addEventListener("click", async () => {
   if (!selectedChat || !confirm(t("confirmClear"))) return;
@@ -790,8 +938,8 @@ $("group-form").addEventListener("submit", async (ev) => {
     setBanner(data.detail || "save failed", "error");
     return;
   }
-  if (data.chat?.id) selectedChat = data.chat.id;
   closePage("page-group");
+  if (data.chat?.id) selectChat(data.chat.id);
   await refresh();
 });
 

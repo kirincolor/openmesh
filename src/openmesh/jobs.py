@@ -9,21 +9,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-MODEL_CATALOG = [
-    "gpt-4o-mini",
-    "gpt-4o",
-    "gpt-4.1",
-    "gpt-4.1-mini",
-    "o4-mini",
-    "o3-mini",
-    "deepseek-chat",
-    "deepseek-reasoner",
-    "llama-3.3-70b-versatile",
-    "qwen2.5",
-    "qwen2.5-coder",
-]
-
-
 class JobError(ValueError):
     pass
 
@@ -183,13 +168,6 @@ class WorkStore:
 
     def model_for(self, thread: str, fallback: str) -> str:
         return self.chat_models.get(thread) or fallback
-
-    def model_options(self, default: str) -> list[str]:
-        seen: list[str] = []
-        for item in [default, *MODEL_CATALOG, *self.chat_models.values()]:
-            if item and item not in seen:
-                seen.append(item)
-        return seen
 
     def add_schedule(self, body: ScheduleIn) -> Schedule:
         text = body.text.strip()

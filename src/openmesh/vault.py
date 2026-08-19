@@ -19,6 +19,14 @@ ALL_TOOLS = {
     "cancel_schedule",
     "http_fetch",
     "shell",
+    "pc_list",
+    "pc_read",
+    "pc_write",
+    "pc_run",
+    "skill_list",
+    "skill_read",
+    "plugin_list",
+    "plugin_run",
 }
 
 

@@ -75,22 +75,39 @@
 
   <section id="page-settings" class="page hidden" aria-hidden="true">
     <header class="page-header">
-      <button type="button" class="back" id="close-settings" data-i18n="back">Back</button>
+      <button type="button" class="back" id="close-settings" data-i18n-title="back" aria-label="Back">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.7 5.3a1 1 0 0 1 0 1.4L9.4 12l5.3 5.3a1 1 0 1 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
+      </button>
       <h2 data-i18n="settings">Settings</h2>
     </header>
     <div class="page-body">
       <section class="card">
-        <h3 data-i18n="provider">Provider</h3>
+        <h3 data-i18n="apis">API accounts</h3>
         <div class="meta-row"><span data-i18n="status">Status</span><b id="key-status"></b></div>
         <div class="meta-row"><span data-i18n="model">Model</span><b id="key-model">—</b></div>
+        <div id="api-list" class="schedule-list"></div>
+        <input type="hidden" id="api-id" />
+        <label for="api-name" data-i18n="apiName">Name</label>
+        <input id="api-name" type="text" />
         <label for="api-key" data-i18n="apiKey">API key</label>
         <input id="api-key" type="password" autocomplete="off" />
         <label for="base-url" data-i18n="baseUrl">Base URL</label>
         <input id="base-url" type="text" />
         <label for="model" data-i18n="model">Model</label>
         <input id="model" type="text" />
-        <button type="button" id="save-key" class="primary" data-i18n="saveLocally">Save locally</button>
+        <button type="button" id="save-key" class="primary" data-i18n="saveApi">Save API</button>
+        <button type="button" id="new-api" class="ghost-btn" data-i18n="addApi">New API</button>
         <p class="hint" data-i18n="keyHint"></p>
+      </section>
+      <section class="card">
+        <h3 data-i18n="computer">This computer</h3>
+        <p class="hint" data-i18n="computerHint"></p>
+        <label for="computer-roots" data-i18n="folders">Folders</label>
+        <textarea id="computer-roots" rows="4"></textarea>
+        <button type="button" id="save-computer" class="primary" data-i18n="saveFolders">Save folders</button>
+        <p class="hint" data-i18n="skillsHint"></p>
+        <div class="meta-row"><span data-i18n="skills">Skills</span><b id="skill-list-view">—</b></div>
+        <div class="meta-row"><span data-i18n="plugins">Plugins</span><b id="plugin-list-view">—</b></div>
       </section>
       <section class="card">
         <h3 data-i18n="appearance">Appearance</h3>
@@ -134,7 +151,9 @@
 
   <section id="page-editor" class="page hidden" aria-hidden="true">
     <header class="page-header">
-      <button type="button" class="back" id="close-editor" data-i18n="back">Back</button>
+      <button type="button" class="back" id="close-editor" data-i18n-title="back" aria-label="Back">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.7 5.3a1 1 0 0 1 0 1.4L9.4 12l5.3 5.3a1 1 0 1 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
+      </button>
       <h2 id="editor-title" data-i18n="newTeammate">New teammate</h2>
     </header>
     <div class="page-body">
@@ -161,7 +180,9 @@
 
   <section id="page-group" class="page hidden" aria-hidden="true">
     <header class="page-header">
-      <button type="button" class="back" id="close-group" data-i18n="back">Back</button>
+      <button type="button" class="back" id="close-group" data-i18n-title="back" aria-label="Back">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.7 5.3a1 1 0 0 1 0 1.4L9.4 12l5.3 5.3a1 1 0 1 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
+      </button>
       <h2 id="group-title-label">New group</h2>
     </header>
     <div class="page-body">
@@ -182,7 +203,9 @@
 
   <section id="page-doc" class="page hidden" aria-hidden="true">
     <header class="page-header">
-      <button type="button" class="back" id="close-doc" data-i18n="back">Back</button>
+      <button type="button" class="back" id="close-doc" data-i18n-title="back" aria-label="Back">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.7 5.3a1 1 0 0 1 0 1.4L9.4 12l5.3 5.3a1 1 0 1 1-1.4 1.4l-6-6a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0Z"/></svg>
+      </button>
       <h2 data-i18n="newDoc">New document</h2>
     </header>
     <div class="page-body">

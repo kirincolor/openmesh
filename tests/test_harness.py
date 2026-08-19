@@ -17,7 +17,7 @@ class ScriptLLM:
         self.script = list(script)
         self.models: list[str] = []
 
-    def complete(self, messages, tools=None, model=None):
+    def complete(self, messages, tools=None, model=None, account=None):
         self.models.append(model)
         if not self.script:
             return {"content": "done"}
@@ -98,8 +98,10 @@ def test_chat_model_and_thread_busy(tmp_path: Path) -> None:
     mesh.cancel_thread("dm:coder")
     assert mesh.work.is_cancelled(run.id)
     snap = mesh.snapshot()
-    assert "deepseek-chat" in snap["models"]["options"]
+    ids = [item["id"] if isinstance(item, dict) else item for item in snap["models"]["options"]]
+    assert "default" in ids
     assert snap["models"]["by_chat"]["dm:coder"] == "deepseek-chat"
+    assert snap["computer"]["roots"]
 
 
 def test_prompt_uses_chat_log_only(tmp_path: Path) -> None:

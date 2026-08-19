@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from pathlib import Path
 
 from contextlib import asynccontextmanager
 
@@ -13,15 +12,18 @@ from pydantic import BaseModel
 
 from .bus import Event
 from .chats import ChatError, GroupIn
+from .computer import ComputerIn
 from .config import MeshConfig, load_config
 from .files import DocIn, FileError
 from .jobs import JobError, ModelIn, ScheduleIn
 from .prefs import PrefsIn, patch_prefs
+from .providers import AccountIn
+from .paths import package_dir
 from .runtime import Mesh
 from .secrets import write_env
 from .team import AgentIn, TeamError, add_agent, remove_agent, update_agent
 
-STATIC = Path(__file__).parent / "static"
+STATIC = package_dir() / "static"
 
 
 class ChatIn(BaseModel):
@@ -61,7 +63,7 @@ def create_app(config: MeshConfig | None = None) -> FastAPI:
         stop.set()
         task.cancel()
 
-    app = FastAPI(title="OpenMesh", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="OpenMesh", version="0.2.0", lifespan=lifespan)
     app.state.mesh = mesh
 
     @app.get("/api/state")
@@ -73,7 +75,7 @@ def create_app(config: MeshConfig | None = None) -> FastAPI:
         text = body.text.strip()
         if not text:
             raise HTTPException(400, "empty message")
-        if not mesh.config.provider.api_key:
+        if not mesh.has_key():
             raise HTTPException(400, "missing API key")
         try:
             thread = mesh.resolve_thread(body.thread, body.to)
@@ -113,26 +115,65 @@ def create_app(config: MeshConfig | None = None) -> FastAPI:
 
         return StreamingResponse(gen(), media_type="text/event-stream")
 
-    @app.post("/api/secrets")
-    async def secrets(body: SecretsIn) -> dict:
+    def _sync_secret(account_id: str | None = None) -> None:
+        account = mesh.providers.get(account_id) if account_id else mesh.providers.default()
+        if account is None:
+            mesh.sync_llm()
+            return
         write_env(
             config.root,
             {
-                "OPENMESH_API_KEY": body.api_key,
-                "OPENMESH_BASE_URL": body.base_url,
-                "OPENMESH_MODEL": body.model,
+                "OPENMESH_API_KEY": account.api_key or None,
+                "OPENMESH_BASE_URL": account.base_url,
+                "OPENMESH_MODEL": account.model,
             },
         )
-        if body.api_key is not None:
-            mesh.config.provider.api_key = body.api_key
-            mesh.llm.provider.api_key = body.api_key
-        if body.base_url is not None:
-            mesh.config.provider.base_url = body.base_url
-            mesh.llm.provider.base_url = body.base_url
-        if body.model is not None:
-            mesh.config.provider.model = body.model
-            mesh.llm.provider.model = body.model
-        return {"ok": True, "has_key": bool(mesh.config.provider.api_key)}
+        mesh.sync_llm()
+
+    @app.post("/api/secrets")
+    async def secrets(body: SecretsIn) -> dict:
+        payload = AccountIn(
+            name="Default",
+            base_url=body.base_url or "https://api.openai.com/v1",
+            api_key=body.api_key,
+            model=body.model or "gpt-4o-mini",
+        )
+        if mesh.providers.accounts:
+            target = mesh.providers.default() or mesh.providers.accounts[0]
+            mesh.providers.update(target.id, payload)
+            _sync_secret(target.id)
+        else:
+            account = mesh.providers.add(payload)
+            _sync_secret(account.id)
+        return {"ok": True, "has_key": mesh.has_key(), "accounts": mesh.providers.public()}
+
+    @app.post("/api/providers")
+    async def create_provider(body: AccountIn) -> dict:
+        account = mesh.providers.add(body)
+        _sync_secret()
+        return {"ok": True, "account": {"id": account.id, "name": account.name, "model": account.model}}
+
+    @app.put("/api/providers/{account_id}")
+    async def edit_provider(account_id: str, body: AccountIn) -> dict:
+        try:
+            account = mesh.providers.update(account_id, body)
+        except KeyError as exc:
+            raise HTTPException(404, f"unknown API: {account_id}") from exc
+        _sync_secret()
+        return {"ok": True, "account": {"id": account.id, "name": account.name, "model": account.model}}
+
+    @app.delete("/api/providers/{account_id}")
+    async def delete_provider(account_id: str) -> dict:
+        try:
+            mesh.providers.delete(account_id)
+        except KeyError as exc:
+            raise HTTPException(404, f"unknown API: {account_id}") from exc
+        _sync_secret()
+        return {"ok": True, "has_key": mesh.has_key()}
+
+    @app.put("/api/computer")
+    async def edit_computer(body: ComputerIn) -> dict:
+        return {"ok": True, "roots": mesh.computer.set_roots(body.roots)}
 
     @app.put("/api/prefs")
     async def prefs(body: PrefsIn) -> dict:

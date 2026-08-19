@@ -91,6 +91,23 @@ def test_create_group_and_clear_only_that_chat(tmp_path: Path) -> None:
     assert "dm:coder" in threads
 
 
+def test_create_group_does_not_copy_dm_history(tmp_path: Path) -> None:
+    mesh = Mesh(_config(tmp_path))
+    mesh.bus.events.extend(
+        [
+            Event(kind="user", sender="you", text="secret for coder", thread="dm:coder"),
+            Event(kind="agent", sender="coder", text="got it", thread="dm:coder"),
+        ]
+    )
+    group = mesh.chats.create_group(
+        mesh.config, GroupIn(title="ship", members=["coder", "researcher"])
+    )
+    assert not any(event.thread == group.id for event in mesh.bus.events)
+    text = mesh._prompt(mesh.config.agent("coder"), group.id)[1]["content"]
+    assert "secret for coder" not in text
+    assert "got it" not in text
+
+
 def test_group_needs_two_members(tmp_path: Path) -> None:
     client = _house(tmp_path)
     res = client.post("/api/chats", json={"title": "Nope", "members": ["coder"]})

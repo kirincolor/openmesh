@@ -21,22 +21,24 @@ class LLM:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
         model: str | None = None,
+        account: ProviderConfig | None = None,
     ) -> dict[str, Any]:
-        if not self.provider.api_key:
-            raise LLMError("Missing API key. Copy .env.example to .env and set OPENMESH_API_KEY.")
+        cfg = account or self.provider
+        if not cfg.api_key:
+            raise LLMError("Missing API key. Open Settings and add an API account.")
         body: dict[str, Any] = {
-            "model": model or self.provider.model,
+            "model": model or cfg.model,
             "messages": messages,
         }
         if tools:
             body["tools"] = tools
             body["tool_choice"] = "auto"
-        url = self.provider.base_url.rstrip("/") + "/chat/completions"
+        url = cfg.base_url.rstrip("/") + "/chat/completions"
         try:
             response = self._client.post(
                 url,
                 headers={
-                    "Authorization": f"Bearer {self.provider.api_key}",
+                    "Authorization": f"Bearer {cfg.api_key}",
                     "Content-Type": "application/json",
                 },
                 json=body,

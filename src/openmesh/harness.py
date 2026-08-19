@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .bus import Event
-from .config import AgentConfig
+from .config import AgentConfig, ProviderConfig
 from .llm import LLM
 from .tools import Toolbelt
 from .vault import VaultDenied
@@ -51,6 +51,7 @@ class Harness:
         messages: list[dict[str, Any]],
         thread: str,
         model: str | None = None,
+        account: ProviderConfig | None = None,
         *,
         emit: Callable[[Event], None] | None = None,
         should_stop: Callable[[], bool] | None = None,
@@ -83,7 +84,9 @@ class Harness:
                         )
                     )
                     return self._finish(result, thread, agent.id, emit)
-                message = self.llm.complete(messages, tools=tools or None, model=model)
+                message = self.llm.complete(
+                    messages, tools=tools or None, model=model, account=account
+                )
                 tool_calls = message.get("tool_calls") or []
                 content = (message.get("content") or "").strip()
                 if content:

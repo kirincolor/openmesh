@@ -19,15 +19,17 @@ agents:
       You are the chief of staff. You talk to the human, decide who should work,
       and summarize results. Do the small things yourself. Delegate real work
       with the handoff tool. Never pretend you finished work you handed off.
-    tools: [handoff, memory_read, memory_write, inbox_list, inbox_read, doc_write, schedule_task, list_schedule, cancel_schedule]
+      Read skills when the job is specialized.
+    tools: [handoff, memory_read, memory_write, inbox_list, inbox_read, doc_write, schedule_task, list_schedule, cancel_schedule, skill_list, skill_read, plugin_list]
 
   - id: coder
     name: Coder
     color: "#3DDC97"
     role: >
-      You write and review code. Stay in your workspace. Explain what you changed.
-      If you need research or a decision, hand off — do not invent missing facts.
-    tools: [handoff, fs_list, fs_read, fs_write, inbox_list, inbox_read, doc_write, memory_read, memory_write]
+      You write files, run commands, and use local skills or plugins.
+      Stay inside your workspace or the allowed computer folders.
+      Explain what you changed. If you need research or a decision, hand off.
+    tools: [handoff, fs_list, fs_read, fs_write, shell, pc_list, pc_read, pc_write, pc_run, inbox_list, inbox_read, doc_write, memory_read, memory_write, skill_list, skill_read, plugin_list, plugin_run]
     workspace: workspaces/coder
 
   - id: researcher
@@ -36,11 +38,12 @@ agents:
     role: >
       You look things up and brief the team. Prefer sources over guesses.
       Return a short brief, not a dump.
-    tools: [handoff, http_fetch, inbox_list, inbox_read, doc_write, memory_read, memory_write]
+    tools: [handoff, http_fetch, inbox_list, inbox_read, doc_write, memory_read, memory_write, skill_list, skill_read]
     workspace: workspaces/researcher
 """
 
 DEFAULT_ENV = """# OpenAI-compatible endpoint. Works with OpenAI, DeepSeek, Groq, Ollama, etc.
+# You can also add several APIs in the app Settings.
 OPENMESH_API_KEY=sk-your-key
 OPENMESH_BASE_URL=https://api.openai.com/v1
 OPENMESH_MODEL=gpt-4o-mini
@@ -48,6 +51,37 @@ OPENMESH_MODEL=gpt-4o-mini
 # Optional: bind address
 OPENMESH_HOST=127.0.0.1
 OPENMESH_PORT=8787
+"""
+
+DEFAULT_SKILL = """# Local files
+
+Use this skill when the human wants files created, edited, or commands run on this computer.
+
+1. Call `pc_list` on `.` to see the allowed folders.
+2. Use `pc_read` / `pc_write` for files inside those folders.
+3. Use `pc_run` for commands such as python, git, or npm. Stay in an allowed folder.
+4. For teammate-only files, use `fs_*` in your workspace instead.
+5. If a skill or plugin fits better, read it first, then follow it.
+"""
+
+DEFAULT_PLUGIN = """{
+  "name": "echo",
+  "description": "Echo arguments back. A template for local plugins.",
+  "tools": [
+    {
+      "name": "echo",
+      "command": ["python", "run.py"]
+    }
+  ]
+}
+"""
+
+DEFAULT_PLUGIN_RUN = """import json
+import sys
+
+payload = json.load(sys.stdin)
+args = payload.get("args") or {}
+print(json.dumps({"ok": True, "echo": args}, ensure_ascii=False))
 """
 
 
@@ -70,4 +104,28 @@ def init_project(root: Path) -> Path:
         readme = folder / "README.md"
         if not readme.exists():
             readme.write_text(note, encoding="utf-8")
+    write_extras(root)
     return root
+
+
+def write_extras(root: Path) -> None:
+    computer = root / "computer"
+    computer.mkdir(parents=True, exist_ok=True)
+    note = computer / "README.md"
+    if not note.exists():
+        note.write_text(
+            "Agents may create files and run commands in this folder, plus any folders you add in Settings.\n",
+            encoding="utf-8",
+        )
+    skill = root / "skills" / "local-files" / "SKILL.md"
+    skill.parent.mkdir(parents=True, exist_ok=True)
+    if not skill.exists():
+        skill.write_text(DEFAULT_SKILL, encoding="utf-8")
+    plugin = root / "plugins" / "echo"
+    plugin.mkdir(parents=True, exist_ok=True)
+    manifest = plugin / "plugin.json"
+    runner = plugin / "run.py"
+    if not manifest.exists():
+        manifest.write_text(DEFAULT_PLUGIN, encoding="utf-8")
+    if not runner.exists():
+        runner.write_text(DEFAULT_PLUGIN_RUN, encoding="utf-8")

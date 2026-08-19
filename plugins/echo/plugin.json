@@ -1,0 +1,10 @@
+{
+  "name": "echo",
+  "description": "Echo arguments back. A template for local plugins.",
+  "tools": [
+    {
+      "name": "echo",
+      "command": ["python", "run.py"]
+    }
+  ]
+}
