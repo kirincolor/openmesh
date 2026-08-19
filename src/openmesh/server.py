@@ -11,8 +11,10 @@ from pydantic import BaseModel
 
 from .bus import Event
 from .config import MeshConfig, load_config
+from .prefs import PrefsIn, patch_prefs
 from .runtime import Mesh
 from .secrets import write_env
+from .team import AgentIn, TeamError, add_agent, remove_agent, update_agent
 
 STATIC = Path(__file__).parent / "static"
 
@@ -20,6 +22,7 @@ STATIC = Path(__file__).parent / "static"
 class ChatIn(BaseModel):
     text: str
     thread: str = "main"
+    to: str | None = None
 
 
 class SecretsIn(BaseModel):
@@ -50,7 +53,7 @@ def create_app(config: MeshConfig | None = None) -> FastAPI:
 
         async def run() -> None:
             try:
-                await mesh.user_say(text, thread=body.thread)
+                await mesh.user_say(text, thread=body.thread, to=body.to)
             except Exception as exc:  # noqa: BLE001 — surface to the room, not the HTTP client
                 await mesh.bus.publish(
                     Event(kind="error", sender="mesh", text=str(exc), thread=body.thread)
@@ -99,6 +102,48 @@ def create_app(config: MeshConfig | None = None) -> FastAPI:
             mesh.config.provider.model = body.model
             mesh.llm.provider.model = body.model
         return {"ok": True, "has_key": bool(mesh.config.provider.api_key)}
+
+    @app.put("/api/prefs")
+    async def prefs(body: PrefsIn) -> dict:
+        return {"ok": True, "prefs": patch_prefs(config.root, body).model_dump()}
+
+    def _busy() -> None:
+        if mesh.running:
+            raise HTTPException(409, "mesh is busy")
+
+    def _team_error(exc: Exception) -> HTTPException:
+        if isinstance(exc, KeyError):
+            return HTTPException(404, f"teammate '{exc.args[0]}' not found")
+        if isinstance(exc, TeamError):
+            return HTTPException(400, str(exc))
+        raise exc
+
+    @app.post("/api/agents")
+    async def create_agent(body: AgentIn) -> dict:
+        _busy()
+        try:
+            agent = add_agent(mesh.config, body)
+        except (TeamError, KeyError) as exc:
+            raise _team_error(exc) from exc
+        return {"ok": True, "agent": agent.model_dump()}
+
+    @app.put("/api/agents/{agent_id}")
+    async def edit_agent(agent_id: str, body: AgentIn) -> dict:
+        _busy()
+        try:
+            agent = update_agent(mesh.config, agent_id, body)
+        except (TeamError, KeyError) as exc:
+            raise _team_error(exc) from exc
+        return {"ok": True, "agent": agent.model_dump()}
+
+    @app.delete("/api/agents/{agent_id}")
+    async def delete_agent(agent_id: str) -> dict:
+        _busy()
+        try:
+            remove_agent(mesh.config, agent_id)
+        except (TeamError, KeyError) as exc:
+            raise _team_error(exc) from exc
+        return {"ok": True, "chief": mesh.config.mesh.chief}
 
     @app.delete("/api/room")
     async def clear_room() -> dict:

@@ -27,6 +27,12 @@ def test_route_mention(tmp_path: Path) -> None:
     assert mesh._route("请 @coder 改文件") == ["coder"]
 
 
+def test_route_prefer_selected_teammate(tmp_path: Path) -> None:
+    mesh = Mesh(_config(tmp_path))
+    assert mesh._route("写一个 hello", prefer="coder") == ["coder"]
+    assert mesh._route("@chief 先看", prefer="coder") == ["chief"]
+
+
 def test_prompt_skips_error_events(tmp_path: Path) -> None:
     mesh = Mesh(_config(tmp_path))
     mesh.bus.events.extend(

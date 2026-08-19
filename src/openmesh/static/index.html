@@ -1,54 +1,130 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OpenMesh</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/static/app.css" />
+  <script>
+    try {
+      const p = JSON.parse(localStorage.getItem("openmesh.prefs") || "{}");
+      document.documentElement.dataset.theme = p.theme === "dark" ? "dark" : "light";
+      document.documentElement.lang = p.language === "zh" ? "zh-CN" : "en";
+    } catch (e) {}
+  </script>
 </head>
 <body>
-  <aside class="rail">
-    <div class="brand">
-      <div class="mark"></div>
-      <div>
-        <div class="name" id="mesh-name">openmesh</div>
-        <div class="sub">local room · split vault</div>
-      </div>
+  <aside class="sidebar">
+    <div class="side-top">
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input id="search" type="search" autocomplete="off" />
+      </label>
+      <button type="button" id="add-agent" class="icon-btn" data-i18n-title="addTeammate">+</button>
     </div>
-    <div class="section-label">Teammates</div>
-    <div id="agents"></div>
-    <div class="section-label">Provider</div>
-    <div class="keybox">
-      <div class="keyline"><span>status</span><b id="key-status">no key</b></div>
-      <div class="keyline"><span>model</span><b id="key-model">—</b></div>
-      <label>API key</label>
-      <input id="api-key" type="password" autocomplete="off" placeholder="sk-…" />
-      <label>Base URL</label>
-      <input id="base-url" type="text" placeholder="https://api.openai.com/v1" />
-      <label>Model</label>
-      <input id="model" type="text" placeholder="gpt-4o-mini" />
-      <button type="button" id="save-key">Save locally</button>
-      <p class="hint">写入本机 .env，不上传。兼容 OpenAI / DeepSeek / Groq / Ollama。</p>
+    <div id="agents" class="agent-list"></div>
+    <div class="side-bottom">
+      <button type="button" id="open-settings" class="userchip">
+        <span class="avatar ink">OM</span>
+        <span class="userchip-text">
+          <b id="you-name">OpenMesh</b>
+          <small data-i18n="settings">Settings</small>
+        </span>
+        <svg class="gear" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.1 12.9a7.6 7.6 0 0 0 .1-.9 7.6 7.6 0 0 0-.1-.9l2-1.6-1.9-3.3-2.4 1a7.2 7.2 0 0 0-1.6-.9l-.4-2.6h-3.8l-.4 2.6a7.2 7.2 0 0 0-1.6.9l-2.4-1-1.9 3.3 2 1.6a7.6 7.6 0 0 0-.1.9 7.6 7.6 0 0 0 .1.9l-2 1.6 1.9 3.3 2.4-1a7.2 7.2 0 0 0 1.6.9l.4 2.6h3.8l.4-2.6a7.2 7.2 0 0 0 1.6-.9l2.4 1 1.9-3.3-2-1.6Zm-7.1 2.3A3.2 3.2 0 1 1 15.2 12 3.2 3.2 0 0 1 12 15.2Z"/></svg>
+      </button>
     </div>
   </aside>
+
   <main>
-    <header>
+    <header class="chat-header">
+      <span id="header-avatar" class="avatar">CH</span>
       <div>
-        <h1>Room</h1>
-        <p>不 @ 任何人时，Chief 先接，再按需交接。点左边的人可以把 @ 写进输入框。</p>
-        <button type="button" id="clear-room" class="ghost">Clear room</button>
+        <h1 id="header-name">Chief</h1>
+        <p id="header-sub"></p>
       </div>
-      <div id="banner" class="banner hidden"></div>
     </header>
+    <div id="banner" class="banner hidden"></div>
     <section id="log" class="log">
-      <div id="empty" class="empty">房间是空的。先存一把 API key，再派第一件事。</div>
+      <div id="empty" class="empty"></div>
     </section>
     <form id="composer">
-      <textarea id="input" rows="2" placeholder="给一屋子同事派活，或 @coder / @researcher"></textarea>
-      <button type="submit">Send</button>
+      <div class="pill">
+        <button type="button" id="mention" class="icon-btn ghost" data-i18n-title="mention">+</button>
+        <textarea id="input" rows="1"></textarea>
+        <button type="submit" id="send" class="send" data-i18n-title="send">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3.4 20.6 21 13.2c.8-.3.8-1.4 0-1.8L3.4 3.9c-.9-.4-1.8.5-1.5 1.4L4 11l8 1-8 1-2.1 5.7c-.3.9.6 1.8 1.5 1.4Z"/></svg>
+        </button>
+      </div>
     </form>
   </main>
+
+  <section id="page-settings" class="page hidden" aria-hidden="true">
+    <header class="page-header">
+      <button type="button" class="back" id="close-settings" data-i18n="back">Back</button>
+      <h2 data-i18n="settings">Settings</h2>
+    </header>
+    <div class="page-body">
+      <section class="card">
+        <h3 data-i18n="provider">Provider</h3>
+        <div class="meta-row"><span data-i18n="status">Status</span><b id="key-status"></b></div>
+        <div class="meta-row"><span data-i18n="model">Model</span><b id="key-model">—</b></div>
+        <label for="api-key" data-i18n="apiKey">API key</label>
+        <input id="api-key" type="password" autocomplete="off" />
+        <label for="base-url" data-i18n="baseUrl">Base URL</label>
+        <input id="base-url" type="text" />
+        <label for="model" data-i18n="model">Model</label>
+        <input id="model" type="text" />
+        <button type="button" id="save-key" class="primary" data-i18n="saveLocally">Save locally</button>
+        <p class="hint" data-i18n="keyHint"></p>
+      </section>
+      <section class="card">
+        <h3 data-i18n="appearance">Appearance</h3>
+        <label data-i18n="theme">Theme</label>
+        <div class="seg" id="theme-seg">
+          <button type="button" data-theme="light" data-i18n="light">Light</button>
+          <button type="button" data-theme="dark" data-i18n="dark">Dark</button>
+        </div>
+        <label data-i18n="language">Language</label>
+        <div class="seg" id="lang-seg">
+          <button type="button" data-lang="en">English</button>
+          <button type="button" data-lang="zh">中文</button>
+        </div>
+      </section>
+      <section class="card">
+        <h3 data-i18n="room">Room</h3>
+        <button type="button" id="clear-room" class="ghost-btn" data-i18n="clearRoom">Clear room</button>
+      </section>
+    </div>
+  </section>
+
+  <section id="page-editor" class="page hidden" aria-hidden="true">
+    <header class="page-header">
+      <button type="button" class="back" id="close-editor" data-i18n="back">Back</button>
+      <h2 id="editor-title" data-i18n="newTeammate">New teammate</h2>
+    </header>
+    <div class="page-body">
+      <form id="agent-form" class="card">
+        <input type="hidden" id="edit-id" />
+        <label for="agent-name" data-i18n="name">Name</label>
+        <input id="agent-name" required />
+        <label for="agent-slug" data-i18n="id">ID</label>
+        <input id="agent-slug" />
+        <p class="hint" id="id-hint" data-i18n="idHint"></p>
+        <label for="agent-color" data-i18n="color">Color</label>
+        <input id="agent-color" type="color" value="#5B8DEF" />
+        <label for="agent-role" data-i18n="role">Role</label>
+        <textarea id="agent-role" rows="5"></textarea>
+        <label data-i18n="tools">Tools</label>
+        <div id="tool-list" class="tool-list"></div>
+        <div class="row-actions">
+          <button type="submit" class="primary" data-i18n="saveTeammate">Save teammate</button>
+          <button type="button" id="delete-agent" class="danger hidden" data-i18n="deleteTeammate">Delete</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
   <script src="/static/app.js"></script>
 </body>
 </html>

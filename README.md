@@ -13,7 +13,7 @@ you ──► chief ──handoff──► coder | researcher
 ## Install
 
 ```bash
-git clone https://github.com/<you>/openmesh.git
+git clone https://github.com/kirincolor/openmesh.git
 cd openmesh
 python -m venv .venv
 .venv\Scripts\activate          # Windows
@@ -32,7 +32,7 @@ copy .env.example .env
 openmesh serve
 ```
 
-Open [http://127.0.0.1:8787](http://127.0.0.1:8787). The sidebar also writes the key to local `.env` only.
+Open [http://127.0.0.1:8787](http://127.0.0.1:8787). Bottom-left **Settings** writes the key to local `.env` only. Theme defaults to light; language defaults to English.
 
 Any OpenAI-compatible endpoint works:
 
@@ -47,7 +47,7 @@ Ollama still wants a dummy `OPENMESH_API_KEY` (any string). The model must suppo
 
 ## Vault
 
-`mesh.yaml` is the team and the lock.
+The left list is the team. Add, edit, or delete teammates in the page; OpenMesh writes `mesh.yaml` for you. You can still edit that file by hand. It is the team and the lock.
 
 - Each agent lists the tools it may use. Anything else is denied.
 - File tools and `shell` are jailed to that agent's `workspace/`.
@@ -66,13 +66,13 @@ Default house:
 
 `shell` exists but is off unless you add it to an agent's `tools` list.
 
-Mention someone with `@coder` to skip the chief. Otherwise chief routes.
+Click a teammate to talk to them. Mention someone with `@coder` to skip the selected person. Otherwise the selected teammate (or chief) routes.
 
 ## Talk to the room
 
-- “写一个 hello.py，打印 openmesh”
-- “@researcher 查一下 DeepSeek 的 OpenAI 兼容地址，然后交给 coder 写成 README 片段”
-- Click a teammate in the left rail to insert `@id`
+- “Write hello.py that prints openmesh”
+- “@researcher look up DeepSeek's OpenAI-compatible URL, then hand it to coder as a README snippet”
+- Click a teammate, or use `+` in the composer to insert `@id`
 
 ## Layout
 
@@ -82,6 +82,7 @@ mesh.yaml                 team + vault
 src/openmesh/             runtime
 workspaces/<agent>/       per-agent disk jail
 data/room.jsonl           persisted room
+data/ui.json              theme + language
 data/memory/              markdown notes
 ```
 

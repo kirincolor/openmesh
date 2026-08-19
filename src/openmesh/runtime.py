@@ -8,8 +8,9 @@ from .bus import Bus, Event
 from .config import AgentConfig, MeshConfig
 from .llm import LLM, LLMError
 from .memory import Memory
+from .prefs import load_prefs
 from .tools import Toolbelt
-from .vault import Vault, VaultDenied
+from .vault import ALL_TOOLS, Vault, VaultDenied
 
 MAX_HISTORY = 36
 MAX_TOOL_ROUNDS = 6
@@ -38,21 +39,32 @@ class Mesh:
                 "model": self.config.provider.model,
                 "has_key": bool(self.config.provider.api_key),
             },
+            "prefs": load_prefs(self.config.root).model_dump(),
+            "tools": sorted(ALL_TOOLS),
             "agents": [
                 {
                     **agent.model_dump(),
                     "workspace": str(self.vault.workspace(agent).relative_to(self.config.root)),
                     "busy": agent.id in self.busy,
+                    **self._preview(agent.id),
                 }
                 for agent in self.config.agents
             ],
             "events": [event.model_dump() for event in self.bus.events[-200:]],
         }
 
+    def _preview(self, agent_id: str) -> dict[str, Any]:
+        for event in reversed(self.bus.events):
+            if event.kind in {"agent", "handoff"} and event.sender == agent_id:
+                return {"preview": (event.text or "")[:120], "preview_ts": event.ts}
+            if event.kind == "user" and f"@{agent_id}" in (event.text or "").lower():
+                return {"preview": (event.text or "")[:120], "preview_ts": event.ts}
+        return {"preview": "", "preview_ts": 0}
+
     def clear_room(self) -> None:
         self.bus.clear()
 
-    async def user_say(self, text: str, thread: str = "main") -> Event:
+    async def user_say(self, text: str, thread: str = "main", to: str | None = None) -> Event:
         text = text.strip()
         if not text:
             raise ValueError("empty message")
@@ -63,7 +75,7 @@ class Mesh:
             self.running = True
             try:
                 await self.bus.publish(event)
-                targets = self._route(text)
+                targets = self._route(text, prefer=to)
                 await self.bus.publish(
                     Event(
                         kind="status",
@@ -79,7 +91,7 @@ class Mesh:
                 self.running = False
         return event
 
-    def _route(self, text: str) -> list[str]:
+    def _route(self, text: str, prefer: str | None = None) -> list[str]:
         found: list[str] = []
         lowered = text.lower()
         for agent in self.config.agents:
@@ -88,6 +100,8 @@ class Mesh:
                 found.append(agent.id)
         if found:
             return found
+        if prefer and any(agent.id == prefer for agent in self.config.agents):
+            return [prefer]
         return [self.config.mesh.chief]
 
     async def _run_agent(self, agent_id: str, thread: str, depth: int) -> None:
