@@ -100,6 +100,19 @@ def create_app(config: MeshConfig | None = None) -> FastAPI:
             mesh.llm.provider.model = body.model
         return {"ok": True, "has_key": bool(mesh.config.provider.api_key)}
 
+    @app.delete("/api/room")
+    async def clear_room() -> dict:
+        mesh.clear_room()
+        return {"ok": True}
+
+    favicon = STATIC / "favicon.svg"
+
+    @app.get("/favicon.ico")
+    async def favicon_ico() -> FileResponse:
+        if not favicon.exists():
+            raise HTTPException(404, "missing favicon")
+        return FileResponse(favicon, media_type="image/svg+xml")
+
     if STATIC.exists():
         app.mount("/static", StaticFiles(directory=STATIC), name="static")
 

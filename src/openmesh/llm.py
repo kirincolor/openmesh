@@ -43,17 +43,31 @@ class LLM:
             )
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            detail = self._redact(exc.response.text[:800])
-            raise LLMError(f"LLM HTTP {exc.response.status_code}: {detail}") from exc
+            raise LLMError(public_llm_error(exc.response.status_code, exc.response.text)) from exc
         except httpx.HTTPError as exc:
-            raise LLMError(f"LLM request failed: {self._redact(str(exc))}") from exc
+            raise LLMError(public_llm_error(None, str(exc))) from exc
         data = response.json()
         choices = data.get("choices") or []
         if not choices:
             raise LLMError(f"Empty LLM response: {data!r}")
         return choices[0]["message"]
 
-    def _redact(self, text: str) -> str:
-        from .secrets import redact
 
-        return redact(text, self.provider.api_key)
+AUTH_MARKERS = (
+    "401",
+    "403",
+    "invalid_api_key",
+    "authentication",
+    "unauthorized",
+    "incorrect api key",
+    "invalid api key",
+)
+
+
+def public_llm_error(status: int | None, detail: str) -> str:
+    blob = f"{status or ''} {detail}".lower()
+    if any(marker in blob for marker in AUTH_MARKERS):
+        return "Provider rejected the API key."
+    if status:
+        return f"LLM HTTP {status}"
+    return "LLM request failed."

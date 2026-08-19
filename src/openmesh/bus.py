@@ -51,6 +51,11 @@ class Bus:
         if listener in self._listeners:
             self._listeners.remove(listener)
 
+    def clear(self) -> None:
+        self.events.clear()
+        if self.path and self.path.exists():
+            self.path.write_text("", encoding="utf-8")
+
     async def publish(self, event: Event) -> Event:
         self.events.append(event)
         if self.path and event.kind in PERSIST_KINDS:

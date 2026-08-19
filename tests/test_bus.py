@@ -17,3 +17,16 @@ def test_persists_and_reloads(tmp_path) -> None:
     reloaded = Bus(path)
     assert len(reloaded.events) == 1
     assert reloaded.events[0].text == "hi"
+
+
+def test_clear_wipes_log(tmp_path) -> None:
+    path = tmp_path / "room.jsonl"
+
+    async def run() -> None:
+        bus = Bus(path)
+        await bus.publish(Event(kind="error", sender="mesh", text="LLM HTTP 401: invalid_api_key"))
+        bus.clear()
+
+    asyncio.run(run())
+    assert Bus(path).events == []
+    assert path.read_text(encoding="utf-8") == ""

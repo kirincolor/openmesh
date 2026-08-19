@@ -1,6 +1,7 @@
 const $ = (id) => document.getElementById(id);
 let state = { agents: [], events: [], provider: {}, mesh: {}, running: false };
 const seen = new Set();
+let bannerKind = "";
 
 function agentById(id) {
   return state.agents.find((a) => a.id === id);
@@ -10,15 +11,17 @@ function colorOf(id) {
   return agentById(id)?.color || "#8B93A7";
 }
 
-function setBanner(text) {
+function setBanner(text, kind) {
   const node = $("banner");
   if (!text) {
     node.classList.add("hidden");
     node.textContent = "";
+    bannerKind = "";
     return;
   }
   node.textContent = text;
   node.classList.remove("hidden");
+  bannerKind = kind || "";
 }
 
 function renderAgents() {
@@ -51,9 +54,15 @@ function renderMeta() {
   $("key-model").textContent = state.provider?.model || "—";
   if (!$("base-url").value) $("base-url").value = state.provider?.base_url || "";
   if (!$("model").value) $("model").value = state.provider?.model || "";
-  if (!state.provider?.has_key) setBanner("还没有 API key。写在左边，只存在这台机器的 .env。");
-  else if ($("banner").textContent.includes("API key")) setBanner("");
+  if (!state.provider?.has_key) setBanner("还没有 API key。写在左边，只存在这台机器的 .env。", "key");
+  else if (bannerKind === "key") setBanner("");
+  if (!state.running && bannerKind === "busy") setBanner("");
   $("composer").querySelector("button").disabled = !!state.running;
+}
+
+function resetLog() {
+  seen.clear();
+  $("log").innerHTML = '<div id="empty" class="empty">房间是空的。先存一把 API key，再派第一件事。</div>';
 }
 
 function addEvent(event) {
@@ -105,23 +114,34 @@ $("save-key").addEventListener("click", async () => {
   const data = await res.json();
   $("api-key").value = "";
   $("key-status").textContent = data.has_key ? "key on disk" : "no key";
-  if (data.has_key) setBanner("");
+  if (data.has_key && (bannerKind === "key" || !bannerKind)) setBanner("");
+});
+
+$("clear-room").addEventListener("click", async () => {
+  await fetch("/api/room", { method: "DELETE" });
+  state.events = [];
+  resetLog();
+  refresh();
 });
 
 $("composer").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const text = $("input").value.trim();
   if (!text) return;
-  $("input").value = "";
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({ detail: res.statusText }));
-    setBanner(data.detail || "send failed");
+  if (res.ok) {
+    $("input").value = "";
+    if (bannerKind === "busy") setBanner("");
+    return;
   }
+  const data = await res.json().catch(() => ({ detail: res.statusText }));
+  const detail = data.detail || "send failed";
+  if (res.status === 409) setBanner(detail, "busy");
+  else setBanner(detail, "error");
 });
 
 $("input").addEventListener("keydown", (ev) => {

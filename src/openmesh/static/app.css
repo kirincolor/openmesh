@@ -92,6 +92,15 @@ main { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; }
 header { padding: 22px 28px 10px; border-bottom: 1px solid var(--line); }
 header h1 { margin: 0; font-size: 22px; font-weight: 600; }
 header p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+button.ghost {
+  width: auto;
+  margin-top: 10px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  font-weight: 550;
+  padding: 5px 10px;
+}
 .log { padding: 20px 28px; overflow: auto; }
 .msg { max-width: 720px; margin: 0 0 16px; }
 .msg .meta { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: flex; gap: 8px; }

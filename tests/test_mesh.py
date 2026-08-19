@@ -86,3 +86,21 @@ def test_chat_requires_key(tmp_path: Path) -> None:
     res = client.post("/api/chat", json={"text": "hi"})
     assert res.status_code == 400
     assert "key" in res.json()["detail"].lower()
+
+
+def test_favicon_is_not_json_404(tmp_path: Path) -> None:
+    (tmp_path / "mesh.yaml").write_text("mesh: {name: t, chief: chief}\nagents: [{id: chief, name: C, role: r}]\n", encoding="utf-8")
+    client = TestClient(create_app(_config(tmp_path)))
+    res = client.get("/favicon.ico")
+    assert res.status_code == 200
+    assert "svg" in res.headers.get("content-type", "")
+
+
+def test_clear_room(tmp_path: Path) -> None:
+    (tmp_path / "mesh.yaml").write_text("mesh: {name: t, chief: chief}\nagents: [{id: chief, name: C, role: r}]\n", encoding="utf-8")
+    app = create_app(_config(tmp_path))
+    app.state.mesh.bus.events.append(Event(kind="error", sender="mesh", text="old"))
+    client = TestClient(app)
+    res = client.delete("/api/room")
+    assert res.status_code == 200
+    assert app.state.mesh.bus.events == []

@@ -14,6 +14,7 @@ from .vault import Vault, VaultDenied
 MAX_HISTORY = 36
 MAX_TOOL_ROUNDS = 6
 MAX_HANDOFF_DEPTH = 4
+CONTEXT_KINDS = {"user", "agent", "system", "tool", "handoff"}
 
 
 class Mesh:
@@ -47,6 +48,9 @@ class Mesh:
             ],
             "events": [event.model_dump() for event in self.bus.events[-200:]],
         }
+
+    def clear_room(self) -> None:
+        self.bus.clear()
 
     async def user_say(self, text: str, thread: str = "main") -> Event:
         text = text.strip()
@@ -209,7 +213,11 @@ class Mesh:
             )
         shared = self.memory.read("shared")
         own = self.memory.read(agent.id)
-        history = [e for e in self.bus.events if e.thread == thread and e.kind != "status"]
+        history = [
+            e
+            for e in self.bus.events
+            if e.thread == thread and e.kind in CONTEXT_KINDS
+        ]
         lines = []
         for event in history[-MAX_HISTORY:]:
             dest = f" → {event.to}" if event.to else ""
