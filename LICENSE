@@ -1,14 +1,6 @@
 OpenMesh Non-Commercial Share-Alike License 1.0
 Copyright (c) 2026 kirincolor and OpenMesh contributors
 
-中文摘要（非正式文本，以英文正文为准）
-
-允许个人、公司或团体使用、学习、研究、修改、Fork 和提交 Pull Request。
-不得通过本软件或其衍生版本获取利润。公开或分发修改后的版本时必须继续使用本许可证，并公开完整源代码，不得闭源。
-凡涉及获取利润（包括销售、收费服务、商业 SaaS 等），必须事先取得版权方书面同意。
-本软件按现状提供。因代码设计、缺陷、安全问题或使用本软件导致的任何不安全状况、损失或事故，作者与版权方概不负责。
-商业授权请通过 GitHub 仓库联系：https://github.com/kirincolor/openmesh
-
 
 1. Definitions
 
@@ -109,9 +101,3 @@ Copyright (c) 2026 kirincolor and OpenMesh contributors
   DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR
   OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE
   USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-
-10. Governing text
-
-  The English text of this license is the official version. The Chinese
-  summary is for convenience only.
