@@ -168,4 +168,4 @@ You may use, change, and share the software for noncommercial purposes (personal
 
 The software comes as is, without warranty. The licensor is not liable for damages from use of the software.
 
-**v0.2.3 and later** installers include PolyForm Noncommercial 1.0.0 (`LICENSE` in the zip). Builds through **v0.2.2** were packed under MIT; those older copies stay MIT.
+Installers from **v0.2.3** include PolyForm Noncommercial 1.0.0 (`LICENSE` in the zip).
