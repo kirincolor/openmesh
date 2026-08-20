@@ -1,6 +1,6 @@
 [project]
 name = "openmesh"
-version = "0.2.2"
+version = "0.2.3"
 description = "Local multi-agent workspace you can download and run: chats, tools, skills, and your APIs."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -56,6 +56,8 @@ try:
 except Exception:
     pass
 
+datas += [(os.path.join(ROOT, "LICENSE"), ".")]
+
 a = Analysis(
     [ENTRY],
     pathex=[os.path.join(ROOT, "src")],
