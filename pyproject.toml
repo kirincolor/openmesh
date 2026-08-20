@@ -1,6 +1,6 @@
 [project]
 name = "openmesh"
-version = "0.2.1"
+version = "0.2.2"
 description = "Local multi-agent workspace you can download and run: chats, tools, skills, and your APIs."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,6 +15,9 @@ dependencies = [
   "python-dotenv>=1.0.1",
   "python-multipart>=0.0.9",
   "platformdirs>=4.0.0",
+  "python-docx>=1.1.0",
+  "openpyxl>=3.1.0",
+  "python-pptx>=1.0.0",
 ]
 
 [project.scripts]

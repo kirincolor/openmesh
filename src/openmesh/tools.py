@@ -11,6 +11,7 @@ from .config import AgentConfig
 from .files import FileError, FileStore
 from .jobs import JobError, ScheduleIn, WorkStore
 from .memory import Memory
+from .office import OfficeError, ensure_suffix, infer_kind, safe_office_path, write_office
 from .ssrf import blocked_reason
 from .vault import Vault, VaultDenied
 
@@ -74,7 +75,7 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "fs_write": {
         "name": "fs_write",
-        "description": "Write a file in your workspace.",
+        "description": "Write a real file in your workspace (use the correct extension: .cpp, .java, .py, …).",
         "parameters": {
             "type": "object",
             "properties": {
@@ -102,14 +103,31 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "doc_write": {
         "name": "doc_write",
-        "description": "Write a markdown document into this chat so the human can download it.",
+        "description": "Attach a file to this chat for download. Use filename with the real extension (.cpp, .java, .py). Not for full projects — those go on disk with pc_write.",
         "parameters": {
             "type": "object",
             "properties": {
                 "title": {"type": "string"},
+                "filename": {"type": "string", "description": "hello.cpp, notes.md, data.csv, …"},
                 "content": {"type": "string"},
             },
             "required": ["title", "content"],
+        },
+    },
+    "office_write": {
+        "name": "office_write",
+        "description": "Write a Word (.docx), Excel (.xlsx), or PowerPoint (.pptx) file on this computer.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Path under an allowed folder, e.g. reports/plan.docx"},
+                "kind": {"type": "string", "description": "docx, xlsx, or pptx (optional if the path has a suffix)"},
+                "title": {"type": "string"},
+                "body": {"type": "string", "description": "Word text, CSV/table for Excel, or slides split by ---"},
+                "rows": {"description": "Excel rows: a list of lists, or CSV text"},
+                "slides": {"description": "PowerPoint slides: [{title, body}, …]"},
+            },
+            "required": ["path"],
         },
     },
     "http_fetch": {
@@ -161,10 +179,13 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "pc_list": {
         "name": "pc_list",
-        "description": "List files in an allowed computer folder.",
+        "description": "List files in an allowed computer folder. Set recursive to see a project tree.",
         "parameters": {
             "type": "object",
-            "properties": {"path": {"type": "string", "default": "."}},
+            "properties": {
+                "path": {"type": "string", "default": "."},
+                "recursive": {"type": "boolean", "default": False},
+            },
         },
     },
     "pc_read": {
@@ -178,7 +199,7 @@ SCHEMAS: dict[str, dict[str, Any]] = {
     },
     "pc_write": {
         "name": "pc_write",
-        "description": "Write a file in an allowed computer folder.",
+        "description": "Write a real file on disk (use .cpp, .java, .py, …). Creates parent folders. Use this for projects.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -257,9 +278,12 @@ class Toolbelt:
         self.thread = "main"
 
     def openai_tools(self, agent: AgentConfig) -> list[dict[str, Any]]:
+        names = list(agent.tools)
+        if "office_write" not in names and {"pc_write", "fs_write", "doc_write"} & set(names):
+            names.append("office_write")
         return [
             {"type": "function", "function": SCHEMAS[name]}
-            for name in agent.tools
+            for name in names
             if name in SCHEMAS
         ]
 
@@ -310,6 +334,9 @@ class Toolbelt:
         names = sorted(p.name + ("/" if p.is_dir() else "") for p in target.iterdir())
         return "\n".join(names) or "(empty)"
 
+    def _local(self, path) -> str:
+        return f"LOCAL::{path.stat().st_size}::{path}"
+
     def _tool_fs_read(self, agent: AgentConfig, args: dict[str, Any]) -> str:
         target = self.vault.resolve_file(agent, str(args["path"]))
         if not target.is_file():
@@ -321,7 +348,7 @@ class Toolbelt:
         target = self.vault.resolve_file(agent, str(args["path"]))
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(str(args.get("content") or ""), encoding="utf-8")
-        return f"wrote {args['path']}"
+        return self._local(target)
 
     def _tool_inbox_list(self, agent: AgentConfig, args: dict[str, Any]) -> str:
         items = self.files.list_thread(self.thread)
@@ -344,11 +371,42 @@ class Toolbelt:
         content = str(args.get("content") or "")
         if not title:
             return "doc_write needs a title"
+        filename = str(args.get("filename") or args.get("name") or "").strip() or None
         try:
-            record = self.files.write_doc(self.thread, title, content)
+            record = self.files.write_doc(self.thread, title, content, filename=filename)
         except FileError as exc:
             return str(exc)
         return f"FILE::{record.id}::{record.name}::{record.size}"
+
+    def _output_path(self, agent: AgentConfig, rel: str):
+        raw = (rel or "").strip()
+        if not raw:
+            raise OfficeError("path is required")
+        if self.computer is not None:
+            try:
+                return self.computer.resolve(raw)
+            except VaultDenied:
+                pass
+        return self.vault.resolve_file(agent, raw)
+
+    def _tool_office_write(self, agent: AgentConfig, args: dict[str, Any]) -> str:
+        rel = str(args.get("path") or "").strip()
+        try:
+            kind = infer_kind(rel, str(args.get("kind") or "") or None)
+            target = ensure_suffix(safe_office_path(self._output_path(agent, rel)), kind)
+            write_office(
+                target,
+                kind,
+                title=str(args.get("title") or ""),
+                body=str(args.get("body") or args.get("content") or ""),
+                rows=args.get("rows"),
+                slides=args.get("slides"),
+            )
+        except (OfficeError, VaultDenied) as exc:
+            return str(exc)
+        except Exception as exc:  # noqa: BLE001 — library/import faults stay in the tool result
+            return f"office write failed: {type(exc).__name__}: {exc}"
+        return self._local(target)
 
     def _tool_http_fetch(self, agent: AgentConfig, args: dict[str, Any]) -> str:
         url = str(args.get("url") or "")
@@ -452,6 +510,8 @@ class Toolbelt:
             return "(missing)"
         if target.is_file():
             return target.name
+        if args.get("recursive"):
+            return self.computer.tree(str(args.get("path") or "."))
         names = sorted(p.name + ("/" if p.is_dir() else "") for p in target.iterdir())
         return "\n".join(names) or "(empty)"
 
@@ -476,7 +536,7 @@ class Toolbelt:
             return str(exc)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(str(args.get("content") or ""), encoding="utf-8")
-        return f"wrote {rel}"
+        return self._local(target)
 
     def _tool_pc_run(self, agent: AgentConfig, args: dict[str, Any]) -> str:
         if self.computer is None:

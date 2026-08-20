@@ -20,16 +20,17 @@ agents:
       and summarize results. Do the small things yourself. Delegate real work
       with the handoff tool. Never pretend you finished work you handed off.
       Read skills when the job is specialized.
-    tools: [handoff, memory_read, memory_write, inbox_list, inbox_read, doc_write, schedule_task, list_schedule, cancel_schedule, skill_list, skill_read, plugin_list]
+    tools: [handoff, memory_read, memory_write, inbox_list, inbox_read, doc_write, office_write, schedule_task, list_schedule, cancel_schedule, skill_list, skill_read, plugin_list]
 
   - id: coder
     name: Coder
     color: "#3DDC97"
     role: >
-      You write files, run commands, and use local skills or plugins.
+      You write real source files and project folders on disk, not markdown stand-ins.
+      Use the correct extension (.cpp, .java, .py, …). Use office_write for Word/Excel/PowerPoint.
       Stay inside your workspace or the allowed computer folders.
       Explain what you changed. If you need research or a decision, hand off.
-    tools: [handoff, fs_list, fs_read, fs_write, shell, pc_list, pc_read, pc_write, pc_run, inbox_list, inbox_read, doc_write, memory_read, memory_write, skill_list, skill_read, plugin_list, plugin_run]
+    tools: [handoff, fs_list, fs_read, fs_write, shell, pc_list, pc_read, pc_write, pc_run, office_write, inbox_list, inbox_read, doc_write, memory_read, memory_write, skill_list, skill_read, plugin_list, plugin_run]
     workspace: workspaces/coder
 
   - id: researcher
@@ -38,7 +39,7 @@ agents:
     role: >
       You look things up and brief the team. Prefer sources over guesses.
       Return a short brief, not a dump.
-    tools: [handoff, http_fetch, inbox_list, inbox_read, doc_write, memory_read, memory_write, skill_list, skill_read]
+    tools: [handoff, http_fetch, inbox_list, inbox_read, doc_write, office_write, memory_read, memory_write, skill_list, skill_read]
     workspace: workspaces/researcher
 """
 
@@ -55,13 +56,14 @@ OPENMESH_PORT=8787
 
 DEFAULT_SKILL = """# Local files
 
-Use this skill when the human wants files created, edited, or commands run on this computer.
+Use this skill when the human wants files, a project, or an office document on this computer.
 
-1. Call `pc_list` on `.` to see the allowed folders.
-2. Use `pc_read` / `pc_write` for files inside those folders.
-3. Use `pc_run` for commands such as python, git, or npm. Stay in an allowed folder.
-4. For teammate-only files, use `fs_*` in your workspace instead.
-5. If a skill or plugin fits better, read it first, then follow it.
+1. Call `pc_list` on `.` (and `recursive` if needed) to see the allowed folders.
+2. Source code is a real file with the right suffix: `main.cpp`, `App.java`, `app.py`. Never put a program in a `.md` file.
+3. A project is a folder: create it, then `pc_write` every file (source, headers, build files). Add `README.md` only as a real readme beside the code.
+4. Word / Excel / PowerPoint: `office_write` to `reports/name.docx` (or `.xlsx` / `.pptx`).
+5. `doc_write` only attaches one downloadable file to the chat. Prefer disk for anything the human will keep.
+6. Stay inside allowed computer folders or your workspace.
 """
 
 DEFAULT_PLUGIN = """{

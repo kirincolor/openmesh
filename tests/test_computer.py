@@ -41,7 +41,8 @@ def test_pc_and_skill_tools(tmp_path: Path) -> None:
     mesh = Mesh(config)
     agent = config.agent("coder")
     wrote = mesh.tools.run(agent, "pc_write", {"path": "hello.txt", "content": "openmesh"})
-    assert "wrote" in wrote
+    assert wrote.startswith("LOCAL::")
+    assert "hello.txt" in wrote
     assert "openmesh" in mesh.tools.run(agent, "pc_read", {"path": "hello.txt"})
     listing = mesh.tools.run(agent, "pc_list", {"path": "."})
     assert "hello.txt" in listing

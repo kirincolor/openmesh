@@ -27,6 +27,7 @@ ALL_TOOLS = {
     "skill_read",
     "plugin_list",
     "plugin_run",
+    "office_write",
 }
 
 
@@ -41,7 +42,10 @@ class Vault:
         self.config = config
 
     def allowed(self, agent: AgentConfig) -> set[str]:
-        return set(agent.tools) & ALL_TOOLS
+        granted = set(agent.tools) & ALL_TOOLS
+        if granted & {"pc_write", "fs_write", "doc_write"}:
+            granted.add("office_write")
+        return granted
 
     def check(self, agent: AgentConfig, tool: str) -> None:
         if tool not in self.allowed(agent):

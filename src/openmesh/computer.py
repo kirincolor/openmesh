@@ -81,6 +81,28 @@ class Computer:
                 return target
         raise VaultDenied(f"path is outside allowed computer folders: {rel}")
 
+    def tree(self, rel: str = ".", max_depth: int = 5) -> str:
+        root = self.resolve(rel)
+        if root.is_file():
+            return root.name
+        lines: list[str] = [str(root)]
+        def walk(folder: Path, prefix: str, depth: int) -> None:
+            if depth > max_depth:
+                return
+            try:
+                kids = sorted(folder.iterdir(), key=lambda item: (not item.is_dir(), item.name.lower()))
+            except OSError as exc:
+                lines.append(f"{prefix}({exc})")
+                return
+            for index, item in enumerate(kids[:200]):
+                last = index == len(kids[:200]) - 1
+                branch = "└─ " if last else "├─ "
+                lines.append(f"{prefix}{branch}{item.name}{'/' if item.is_dir() else ''}")
+                if item.is_dir():
+                    walk(item, prefix + ("   " if last else "│  "), depth + 1)
+        walk(root, "", 1)
+        return "\n".join(lines)[:12_000]
+
     def run(self, command: str, cwd: str | None = None, timeout: int = 60) -> str:
         raw = command.strip()
         if not raw:

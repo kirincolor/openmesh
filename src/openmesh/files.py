@@ -19,14 +19,44 @@ TEXT_SUFFIXES = {
     ".yaml",
     ".yml",
     ".py",
+    ".pyi",
     ".js",
+    ".jsx",
     ".ts",
+    ".tsx",
     ".html",
     ".css",
     ".xml",
     ".toml",
     ".ini",
     ".rst",
+    ".c",
+    ".cc",
+    ".cpp",
+    ".cxx",
+    ".h",
+    ".hpp",
+    ".java",
+    ".kt",
+    ".go",
+    ".rs",
+    ".rb",
+    ".php",
+    ".cs",
+    ".swift",
+    ".m",
+    ".mm",
+    ".sql",
+    ".sh",
+    ".bat",
+    ".ps1",
+    ".r",
+    ".lua",
+    ".vue",
+    ".svelte",
+    ".gradle",
+    ".cmake",
+    ".makefile",
 }
 SAFE_THREAD = re.compile(r"[^a-zA-Z0-9._-]+")
 UNSAFE_NAME = re.compile(r"[\\/]+")
@@ -49,6 +79,7 @@ class FileRecord(BaseModel):
 class DocIn(BaseModel):
     title: str
     content: str = ""
+    filename: str | None = None
 
 
 def sanitize_name(name: str) -> str:
@@ -62,6 +93,16 @@ def sanitize_name(name: str) -> str:
 def slug_title(title: str) -> str:
     slug = re.sub(r"[^a-zA-Z0-9\u4e00-\u9fff]+", "-", title.strip()).strip("-")
     return (slug[:60] or "document") + ".md"
+
+
+def filename_for(title: str, filename: str | None = None) -> str:
+    if filename and filename.strip():
+        return sanitize_name(filename)
+    raw = title.strip()
+    suffix = Path(raw).suffix
+    if suffix and suffix != ".":
+        return sanitize_name(raw)
+    return slug_title(raw)
 
 
 class FileStore:
@@ -138,15 +179,17 @@ class FileStore:
         self._save()
         return record
 
-    def write_doc(self, thread: str, title: str, content: str) -> FileRecord:
+    def write_doc(self, thread: str, title: str, content: str, filename: str | None = None) -> FileRecord:
         title = title.strip() or "Untitled"
+        name = filename_for(title, filename)
         body = content if content.endswith("\n") else content + "\n"
+        guessed, _ = mimetypes.guess_type(name)
         return self.save_bytes(
             thread,
-            slug_title(title),
+            name,
             body.encode("utf-8"),
             kind="doc",
-            mime="text/markdown",
+            mime=guessed or ("text/markdown" if name.endswith(".md") else "text/plain"),
         )
 
     def read_text(self, file_id: str, thread: str | None = None) -> str:

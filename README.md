@@ -117,11 +117,12 @@ Add each one in Settings. Ollama still wants a dummy API key (any string). The h
 | `handoff` | Give another teammate a concrete task |
 | `memory_read` / `memory_write` | Personal notes, or `shared` |
 | `fs_list` / `fs_read` / `fs_write` | Files in that agent's workspace |
-| `pc_list` / `pc_read` / `pc_write` / `pc_run` | Files and commands in allowed computer folders |
+| `pc_list` / `pc_read` / `pc_write` / `pc_run` | Real files and commands in allowed folders (projects, `.cpp`, `.java`, …) |
 | `skill_list` / `skill_read` | Local `SKILL.md` instructions |
 | `plugin_list` / `plugin_run` | Local plugins (`plugin.json` + a command) |
 | `inbox_list` / `inbox_read` | Files and docs attached to **this** chat |
-| `doc_write` | Write a markdown document into this chat |
+| `doc_write` | Attach one downloadable file to this chat (keep the real extension) |
+| `office_write` | Write Word / Excel / PowerPoint on disk |
 | `schedule_task` / `list_schedule` / `cancel_schedule` | Timed follow-ups |
 | `http_fetch` | GET a public URL (no localhost / private IPs) |
 | `shell` | Command in the agent's workspace only |

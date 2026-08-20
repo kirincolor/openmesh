@@ -79,3 +79,12 @@ def test_doc_write_tool_stays_in_thread(tmp_path: Path) -> None:
     assert "Brief.md" in listed
     empty = mesh.tools.run(chief, "inbox_list", {}, thread="dm:coder")
     assert "Brief.md" not in empty
+
+
+def test_doc_keeps_source_extension(tmp_path: Path) -> None:
+    store = FileStore(tmp_path)
+    rec = store.write_doc("dm:coder", "Main.java", "class Main {}")
+    assert rec.name == "Main.java"
+    assert rec.mime != "text/markdown"
+    named = store.write_doc("dm:coder", "Notes", "int x;", filename="sum.cpp")
+    assert named.name == "sum.cpp"

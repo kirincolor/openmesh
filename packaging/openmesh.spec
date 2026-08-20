@@ -18,7 +18,11 @@ hiddenimports = [
     "openmesh.desktop",
     "openmesh.server",
     "openmesh.cli",
+    "openmesh.office",
     "multipart",
+    "docx",
+    "openpyxl",
+    "pptx",
 ]
 
 for pkg in (
@@ -32,6 +36,9 @@ for pkg in (
     "dotenv",
     "httpx",
     "platformdirs",
+    "docx",
+    "openpyxl",
+    "pptx",
 ):
     try:
         extra_d, extra_b, extra_h = collect_all(pkg)

@@ -80,6 +80,7 @@ def test_state_includes_prefs_and_tools(tmp_path: Path) -> None:
     assert state["prefs"] == {"theme": "light", "language": "en"}
     assert "handoff" in state["tools"]
     assert "shell" in state["tools"]
+    assert "office_write" in state["tools"]
 
 
 def test_prefs_roundtrip(tmp_path: Path) -> None:

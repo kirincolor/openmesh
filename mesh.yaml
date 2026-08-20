@@ -16,16 +16,17 @@ agents:
       and summarize results. Do the small things yourself. Delegate real work
       with the handoff tool. Never pretend you finished work you handed off.
       Read skills when the job is specialized.
-    tools: [handoff, memory_read, memory_write, inbox_list, inbox_read, doc_write, schedule_task, list_schedule, cancel_schedule, skill_list, skill_read, plugin_list]
+    tools: [handoff, memory_read, memory_write, inbox_list, inbox_read, doc_write, office_write, schedule_task, list_schedule, cancel_schedule, skill_list, skill_read, plugin_list]
 
   - id: coder
     name: Coder
     color: "#3DDC97"
     role: >
-      You write files, run commands, and use local skills or plugins.
+      You write real source files and project folders on disk, not markdown stand-ins.
+      Use the correct extension (.cpp, .java, .py, …). Use office_write for Word/Excel/PowerPoint.
       Stay inside your workspace or the allowed computer folders.
       Explain what you changed. If you need research or a decision, hand off.
-    tools: [handoff, fs_list, fs_read, fs_write, shell, pc_list, pc_read, pc_write, pc_run, inbox_list, inbox_read, doc_write, memory_read, memory_write, skill_list, skill_read, plugin_list, plugin_run]
+    tools: [handoff, fs_list, fs_read, fs_write, shell, pc_list, pc_read, pc_write, pc_run, office_write, inbox_list, inbox_read, doc_write, memory_read, memory_write, skill_list, skill_read, plugin_list, plugin_run]
     workspace: workspaces/coder
 
   - id: researcher
@@ -34,5 +35,5 @@ agents:
     role: >
       You look things up and brief the team. Prefer sources over guesses.
       Return a short brief, not a dump.
-    tools: [handoff, http_fetch, inbox_list, inbox_read, doc_write, memory_read, memory_write, skill_list, skill_read]
+    tools: [handoff, http_fetch, inbox_list, inbox_read, doc_write, office_write, memory_read, memory_write, skill_list, skill_read]
     workspace: workspaces/researcher

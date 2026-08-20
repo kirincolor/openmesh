@@ -317,6 +317,41 @@ main {
   white-space: pre-wrap;
   word-break: break-word;
 }
+.msg .body.md {
+  white-space: normal;
+}
+.msg .body.md p { margin: 0 0 0.7em; }
+.msg .body.md p:last-child { margin-bottom: 0; }
+.msg .body.md h1,
+.msg .body.md h2,
+.msg .body.md h3 { margin: 0 0 0.5em; font-size: 1.05em; }
+.msg .body.md ul,
+.msg .body.md ol { margin: 0 0 0.7em; padding-left: 1.3em; }
+.msg .body.md code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.9em;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+}
+.msg .body.md pre.md-code {
+  margin: 0 0 0.7em;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ink) 8%, var(--bg));
+  overflow-x: auto;
+}
+.msg .body.md pre.md-code code {
+  background: transparent;
+  padding: 0;
+  font-size: 12px;
+  white-space: pre;
+}
+.msg .body.md a { color: inherit; text-decoration: underline; }
+.msg.user .body.md code,
+.msg.user .body.md pre.md-code {
+  background: color-mix(in srgb, var(--user-ink) 14%, transparent);
+}
 .msg.user .body {
   background: var(--user);
   color: var(--user-ink);

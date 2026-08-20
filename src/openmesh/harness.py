@@ -138,6 +138,26 @@ class Harness:
                                 )
                             )
                         tool_result = f"wrote document {parts[2] if len(parts) > 2 else ''}"
+                    if tool_result.startswith("LOCAL::"):
+                        parts = tool_result.split("::", 2)
+                        if len(parts) == 3:
+                            _, size, path = parts
+                            name = path.replace("\\", "/").rstrip("/").split("/")[-1] or path
+                            push(
+                                Event(
+                                    kind="file",
+                                    sender=agent.id,
+                                    text=name,
+                                    thread=thread,
+                                    meta={
+                                        "name": name,
+                                        "path": path,
+                                        "size": int(size or 0),
+                                        "kind": "local",
+                                    },
+                                )
+                            )
+                            tool_result = f"wrote {path}"
                     push(
                         Event(
                             kind="tool",

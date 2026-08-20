@@ -25,6 +25,9 @@ const I18N = {
     uploaded: "Uploaded.",
     document: "Document",
     download: "Download",
+    onDisk: "Saved on disk",
+    docFilename: "Filename",
+    docFilenamePlaceholder: "notes.md or hello.cpp",
     send: "Send",
     back: "Back",
     provider: "Provider",
@@ -120,6 +123,9 @@ const I18N = {
     uploaded: "已上传。",
     document: "文档",
     download: "下载",
+    onDisk: "已写到本地",
+    docFilename: "文件名",
+    docFilenamePlaceholder: "notes.md 或 hello.cpp",
     send: "发送",
     back: "返回",
     provider: "模型服务",
@@ -250,6 +256,7 @@ function paintI18n() {
   $("agent-role").placeholder = t("rolePlaceholder");
   $("group-name").placeholder = t("groupPlaceholder");
   $("doc-title").placeholder = t("docTitle");
+  $("doc-name").placeholder = t("docFilenamePlaceholder");
   $("doc-body").placeholder = t("docBody");
   renderMeta();
   renderHeader();
@@ -552,7 +559,14 @@ function addEvent(event) {
   const who = event.sender === "you" ? t("you") : agentById(event.sender)?.name || event.sender;
   const dest = event.to ? ` → ${event.to}` : "";
   const fileId = event.meta?.file_id || event.meta?.id;
-  if (event.kind === "file" && fileId) {
+  if (event.kind === "file" && event.meta?.path && !fileId) {
+    const size = prettySize(event.meta.size || 0);
+    el.innerHTML = `<div class="meta">${escapeHtml(who)}</div>
+      <div class="body file-card">
+        <b>${escapeHtml(event.meta.name || event.text || "file")}</b>
+        <small>${escapeHtml(event.meta.path)} · ${escapeHtml(size)} · ${escapeHtml(t("onDisk"))}</small>
+      </div>`;
+  } else if (event.kind === "file" && fileId) {
     const size = prettySize(event.meta.size || 0);
     const kind = event.meta.kind === "doc" ? t("document") : t("download");
     el.innerHTML = `<div class="meta">${escapeHtml(who)}</div>
@@ -560,12 +574,63 @@ function addEvent(event) {
         <b>${escapeHtml(event.meta.name || event.text || "file")}</b>
         <small>${escapeHtml(size)} · ${escapeHtml(kind)}</small>
       </a>`;
-  } else {
+  } else if (event.kind === "tool" || event.kind === "status" || event.kind === "handoff") {
     el.innerHTML = `<div class="meta">${escapeHtml(who + dest)}</div>
       <div class="body">${escapeHtml(event.text || "")}</div>`;
+  } else {
+    el.innerHTML = `<div class="meta">${escapeHtml(who + dest)}</div>
+      <div class="body md">${renderMarkdown(event.text || "")}</div>`;
   }
   log.appendChild(el);
   log.scrollTop = log.scrollHeight;
+}
+
+function inlineMarkdown(text) {
+  return text
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/__(.+?)__/g, "<strong>$1</strong>")
+    .replace(/(^|[^\*])\*(?!\*)([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+}
+
+function renderMarkdown(raw) {
+  const fences = [];
+  let text = String(raw || "").replace(/\r\n/g, "\n");
+  text = text.replace(/```([A-Za-z0-9_+-]*)[ \t]*\n([\s\S]*?)```/g, (_, lang, code) => {
+    fences.push({ lang: lang || "", code });
+    return `\n\n%%FENCE${fences.length - 1}%%\n\n`;
+  });
+  text = escapeHtml(text);
+  const fenceHtml = (index) => {
+    const item = fences[index];
+    if (!item) return "";
+    const lang = escapeHtml(item.lang);
+    const code = escapeHtml(item.code.replace(/\n$/, ""));
+    return `<pre class="md-code"><code class="lang-${lang}">${code}</code></pre>`;
+  };
+  return text
+    .split(/\n{2,}/)
+    .map((block) => {
+      const trimmed = block.trim();
+      if (!trimmed) return "";
+      const only = trimmed.match(/^%%FENCE(\d+)%%$/);
+      if (only) return fenceHtml(Number(only[1]));
+      const heading = trimmed.match(/^(#{1,3}) (.+)$/);
+      if (heading && !trimmed.includes("\n")) {
+        const level = heading[1].length;
+        return `<h${level}>${inlineMarkdown(heading[2])}</h${level}>`;
+      }
+      const lines = trimmed.split("\n");
+      if (lines.every((line) => /^\s*[-*] /.test(line))) {
+        return `<ul>${lines.map((line) => `<li>${inlineMarkdown(line.replace(/^\s*[-*] /, ""))}</li>`).join("")}</ul>`;
+      }
+      if (lines.every((line) => /^\s*\d+\. /.test(line))) {
+        return `<ol>${lines.map((line) => `<li>${inlineMarkdown(line.replace(/^\s*\d+\. /, ""))}</li>`).join("")}</ol>`;
+      }
+      return `<p>${inlineMarkdown(trimmed).replace(/\n/g, "<br/>")}</p>`;
+    })
+    .join("");
 }
 
 function prettySize(n) {
@@ -750,6 +815,7 @@ $("mention").addEventListener("click", (ev) => {
   $("open-doc").addEventListener("click", () => {
     $("mention-menu").classList.add("hidden");
     $("doc-title").value = "";
+    $("doc-name").value = "";
     $("doc-body").value = "";
     openPage("page-doc");
   });
@@ -794,7 +860,11 @@ $("doc-form").addEventListener("submit", async (ev) => {
   const res = await fetch(`/api/chats/${encodeURIComponent(selectedChat)}/docs`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: $("doc-title").value.trim(), content: $("doc-body").value }),
+    body: JSON.stringify({
+      title: $("doc-title").value.trim(),
+      filename: $("doc-name").value.trim() || undefined,
+      content: $("doc-body").value,
+    }),
   });
   const data = await res.json().catch(() => ({ detail: res.statusText }));
   if (!res.ok) {

@@ -63,7 +63,7 @@ def create_app(config: MeshConfig | None = None) -> FastAPI:
         stop.set()
         task.cancel()
 
-    app = FastAPI(title="OpenMesh", version="0.2.1", lifespan=lifespan)
+    app = FastAPI(title="OpenMesh", version="0.2.2", lifespan=lifespan)
     app.state.mesh = mesh
 
     @app.get("/api/state")
@@ -279,7 +279,7 @@ def create_app(config: MeshConfig | None = None) -> FastAPI:
     async def write_doc(chat_id: str, body: DocIn) -> dict:
         _require_chat(chat_id)
         try:
-            record = mesh.files.write_doc(chat_id, body.title, body.content)
+            record = mesh.files.write_doc(chat_id, body.title, body.content, filename=body.filename)
         except FileError as exc:
             raise _team_error(exc) from exc
         return {"ok": True, "file": await _publish_file(record)}
