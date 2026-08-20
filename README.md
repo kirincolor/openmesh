@@ -160,4 +160,14 @@ pytest
 
 Desktop zip builds run on git tags `v*` via `.github/workflows/release.yml`.
 
-MIT. See `LICENSE`.
+## License
+
+**OpenMesh Non-Commercial Share-Alike License 1.0.** See `LICENSE`.
+
+Individuals, companies, and groups may use, study, and modify the software. They must not obtain profit from it. If you publish a modification, it must stay under this license and you must publish the source.
+
+Selling it, offering it as commercial SaaS, or otherwise making a profit from it requires prior written consent. Ask through [the GitHub repository](https://github.com/kirincolor/openmesh).
+
+The software is provided as is. The authors are not responsible for insecurity, loss, or accidents caused by the design or use of the code.
+
+Tagged releases before this change were MIT; this license applies from the commit that added it onward.

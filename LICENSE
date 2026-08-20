@@ -1,21 +1,117 @@
-MIT License
+OpenMesh Non-Commercial Share-Alike License 1.0
+Copyright (c) 2026 kirincolor and OpenMesh contributors
 
-Copyright (c) 2026 openmesh contributors
+中文摘要（非正式文本，以英文正文为准）
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+允许个人、公司或团体使用、学习、研究、修改、Fork 和提交 Pull Request。
+不得通过本软件或其衍生版本获取利润。公开或分发修改后的版本时必须继续使用本许可证，并公开完整源代码，不得闭源。
+凡涉及获取利润（包括销售、收费服务、商业 SaaS 等），必须事先取得版权方书面同意。
+本软件按现状提供。因代码设计、缺陷、安全问题或使用本软件导致的任何不安全状况、损失或事故，作者与版权方概不负责。
+商业授权请通过 GitHub 仓库联系：https://github.com/kirincolor/openmesh
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. Definitions
+
+  "Software" means this source code, documentation, and accompanying files.
+  "You" means any individual, company, group, or other organization exercising
+  rights under this license.
+  "Modify" means to create a derivative work of the Software.
+  "Distribute" means to provide a copy of the Software, or of a modification, to
+  another person, including by public repository, download, or physical media.
+  "Profit" means money or other commercial advantage obtained from the Software
+  or a modification, including without limitation: selling it; charging for
+  copies, access, support bundled as a paid product, or hosting; offering it as
+  commercial SaaS or an equivalent paid service; advertising-supported public
+  hosting of it; and including it as a material part of a product that is sold.
+
+
+2. Grant
+
+  Subject to the conditions below, the copyright holders grant You a worldwide,
+  royalty-free, non-exclusive, non-transferable license to use, copy, study,
+  Modify, Fork, and Distribute the Software, and to submit Pull Requests to the
+  upstream project.
+
+  Companies and other groups may do the same, provided they do not obtain
+  Profit from the Software or a modification.
+
+
+3. Conditions
+
+  a. License notice. You must keep this license and copyright notice in every
+     copy or substantial portion You Distribute.
+
+  b. Share-Alike and source. If You Distribute the Software or a modification,
+     You must license that work under this same license (this version or a later
+     version published by the copyright holders for this project), and You must
+     make the corresponding complete source code publicly available under this
+     license, at no charge beyond reasonable reproduction cost. You may not
+     Distribute a closed-source modification. You may not add terms that
+     restrict the rights this license grants.
+
+  c. Attribution. You must give reasonable credit to the original authors and,
+     if You Distribute a modification, state that it is a modification.
+
+  d. No Profit without consent. You may not obtain Profit from the Software or
+     a modification unless You first obtain written consent from the copyright
+     holders.
+
+
+4. Restrictions
+
+  Unless You have written consent from the copyright holders, You may not:
+
+  a. obtain Profit from the Software or any modification;
+  b. offer the Software, or any modification, as a commercial hosted service,
+     SaaS, or equivalent;
+  c. sell the Software or any modification, or include it as a material part of
+     a product that is sold;
+  d. sublicense the Software except as required to exercise the rights in this
+     license.
+
+
+5. Paid or commercial permission
+
+  If You want to obtain Profit from the Software, sell it, or offer it as a
+  commercial service, You must get written permission first. Ask through the
+  project's GitHub repository: https://github.com/kirincolor/openmesh
+
+
+6. No trademark license
+
+  This license does not grant rights to the name "OpenMesh" or related marks,
+  except as needed to describe the origin of the Software.
+
+
+7. Termination
+
+  If You breach this license, Your rights end automatically. If You become
+  compliant and the copyright holders do not notify You of the breach within
+  30 days, Your rights are reinstated. Sections 8 and 9 survive termination.
+
+
+8. No warranty; no responsibility for safety or accidents
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE, NONINFRINGEMENT, AND SECURITY.
+
+  THE SOFTWARE MAY CONTAIN DESIGN FLAWS, BUGS, OR SECURITY WEAKNESSES. YOU USE
+  IT AT YOUR OWN RISK. THE AUTHORS AND COPYRIGHT HOLDERS ARE NOT RESPONSIBLE
+  FOR ANY UNSAFE CONDITION, DATA LOSS, SECURITY INCIDENT, INJURY, DAMAGE, OR
+  OTHER ACCIDENT ARISING FROM THE DESIGN OR IMPLEMENTATION OF THE SOFTWARE,
+  FROM A MODIFICATION, OR FROM YOUR USE OF IT.
+
+
+9. Limitation of liability
+
+  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+  DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR
+  OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE
+  USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+10. Governing text
+
+  The English text of this license is the official version. The Chinese
+  summary is for convenience only.
